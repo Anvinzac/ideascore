@@ -1,5 +1,5 @@
 import type { Idea } from "../types";
-import { composeVietnameseCopy, inferActionGroup, looksVietnamese } from "./descriptionComposer";
+import { looksVietnamese, translateDescriptionEnToVi, translateTitleEnToVi } from "./descriptionComposer";
 
 export type Locale = "vi" | "en";
 
@@ -1026,68 +1026,14 @@ const viTitleReplacements: Array<[RegExp, string]> = [
   [/\bcommunity feedback\b/g, "phản hồi cộng đồng"],
 ];
 
-const translateGeneratedSeedTitleVi = (title: string) => {
-  const cleaned = cleanSeedTitle(title).replace(/\s*tool$/i, "").replace(/\s*tracker$/i, "").trim();
-  let value = cleaned.toLowerCase();
-  for (const [pattern, replacement] of viPhraseReplacements) {
-    value = value.replace(pattern, replacement);
-  }
-  for (const [pattern, replacement] of viTitleReplacements) {
-    value = value.replace(pattern, replacement);
-  }
-
-  value = value
-    .replace(/\s+/g, " ")
-    .replace(/\b(of|and|the|to|for|from|in|on|at|with|by)\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!value) return "Ý tưởng";
-
-  const suffixPrefix = /dashboard$/.test(cleaned)
-    ? "Bảng điều khiển"
-    : /summary$/.test(cleaned)
-      ? "Tóm tắt"
-      : /planner$/.test(cleaned) || /scheduler$/.test(cleaned) || /schedule$/.test(cleaned)
-        ? "Lập lịch"
-        : /checker$/.test(cleaned)
-          ? "Kiểm tra"
-          : /calculator$/.test(cleaned)
-            ? "Tính toán"
-            : /log$/.test(cleaned) || /logging tool$/.test(cleaned)
-              ? "Nhật ký"
-              : /tracking tool$/.test(cleaned) || /tracker$/.test(cleaned) || /status tracker$/.test(cleaned)
-                ? "Theo dõi"
-                : /tagging tool$/.test(cleaned)
-                  ? "Gắn nhãn"
-                  : /comparison tool$/.test(cleaned)
-                    ? "So sánh"
-                      : /status tool$/.test(cleaned)
-                        ? "Trạng thái"
-                        : /helper$/.test(cleaned)
-                          ? "Trợ lý"
-                          : "";
-
-  const alreadyNatural = /^(trạng thái|theo dõi|bảng điều khiển|tóm tắt|lập lịch|kiểm tra|tính toán|nhật ký|gắn nhãn|so sánh|trợ lý|phân|xếp|báo cáo|điểm danh|nhắc|quyền|thư viện|danh sách|ảnh|phê duyệt|phân khu|lập tuyến|ghi|tiến độ|cải tạo|hành động|phản hồi)/.test(
-    value,
-  );
-
-  const translated = alreadyNatural
-    ? value
-    : suffixPrefix
-      ? `${suffixPrefix} ${value}`.replace(/\s+/g, " ").trim()
-      : value;
-
-  return translated.charAt(0).toUpperCase() + translated.slice(1);
-};
-
 export const translateSeedTitle = (title: string, locale: Locale) => {
   const cleaned = cleanSeedTitle(title);
+  if (locale === "vi") {
+    const explicitVi = seedTitleLabels[cleaned]?.vi;
+    return translateTitleEnToVi(cleaned, explicitVi);
+  }
   const explicit = seedTitleLabels[cleaned]?.[locale];
   if (explicit) return explicit;
-  if (locale === "vi") {
-    return translateGeneratedSeedTitleVi(cleaned);
-  }
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 };
 
@@ -1101,11 +1047,9 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
   let summary = idea.summary;
   let details = idea.details;
 
-  if (isSeed && locale === "vi" && !looksVietnamese(summary) && !looksVietnamese(details)) {
-    const action = inferActionGroup(idea.title, idea.details || idea.summary);
-    const viCopy = composeVietnameseCopy(idea.category, title, action);
-    summary = viCopy.summary;
-    details = viCopy.details;
+  if (isSeed && locale === "vi") {
+    if (!looksVietnamese(summary)) summary = translateDescriptionEnToVi(summary);
+    if (!looksVietnamese(details)) details = translateDescriptionEnToVi(details);
   }
 
   return {

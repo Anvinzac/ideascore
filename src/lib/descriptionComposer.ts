@@ -704,3 +704,199 @@ export const shouldAutoUpgradeSeedText = (summary: string, details: string) => {
 };
 
 export type { ActionGroup };
+
+const stripTrailingPeriod = (value: string) => value.trim().replace(/\.\s*$/, "").trim();
+
+const extractCites = (value: string) => {
+  const matches = value.match(/\[cite:\s*\d+\]/gi) ?? [];
+  const cites = matches.join(" ").trim();
+  const text = value.replace(/\[cite:\s*\d+\]/gi, "").replace(/\s+/g, " ").trim();
+  return { text, cites };
+};
+
+// "Other translator": a deterministic glossary-based translator to avoid mixed/nonsense output.
+// We only translate the controlled short descriptions and idea titles used in this app.
+const VI_GLOSSARY: Array<[RegExp, string]> = [
+  // Insurance
+  [/\binsurance policy\b/gi, "hợp đồng bảo hiểm"],
+  [/\bpolicyholder\b/gi, "bên mua bảo hiểm"],
+  [/\bpolicy\b/gi, "hợp đồng"],
+  [/\bclaim(s)?\b/gi, "yêu cầu bồi thường$1"],
+  [/\bunderwriting\b/gi, "thẩm định"],
+  [/\brenewal(s)?\b/gi, "gia hạn$1"],
+  [/\bpremium\b/gi, "phí bảo hiểm"],
+  [/\bdeductible\b/gi, "mức khấu trừ"],
+  [/\bexcess\b/gi, "mức miễn thường"],
+  [/\brider\b/gi, "điều khoản bổ sung"],
+  [/\bcoverage gap\b/gi, "khoảng trống bảo hiểm"],
+  [/\bfraud\b/gi, "gian lận"],
+  [/\brisk profile\b/gi, "hồ sơ rủi ro"],
+  [/\brisk category\b/gi, "nhóm rủi ro"],
+  [/\binsured asset(s)?\b/gi, "tài sản được bảo hiểm$1"],
+  [/\badjuster\b/gi, "giám định viên"],
+  [/\bout-of-pocket\b/gi, "tự chi trả"],
+  // Marketing / agencies
+  [/\bcampaign(s)?\b/gi, "chiến dịch$1"],
+  [/\bcreative asset(s)?\b/gi, "tài sản sáng tạo$1"],
+  [/\bmedia spend\b/gi, "chi tiêu quảng cáo"],
+  [/\bad copy\b/gi, "nội dung quảng cáo"],
+  [/\bchannel performance\b/gi, "hiệu quả kênh"],
+  [/\bA\/B test\b/gi, "A/B test"],
+  [/\binfluencer(s)?\b/gi, "KOL/KOC$1"],
+  [/\bstakeholder(s)?\b/gi, "bên liên quan$1"],
+  [/\bbudget\b/gi, "ngân sách"],
+  [/\bdeadline(s)?\b/gi, "hạn chót$1"],
+  [/\bcalendar\b/gi, "lịch"],
+  [/\baudience\b/gi, "tệp khách hàng"],
+  [/\bbrief\b/gi, "brief"],
+  // EdTech / education
+  [/\bcourse(s)?\b/gi, "khóa học$1"],
+  [/\blearner(s)?\b/gi, "người học$1"],
+  [/\bquiz(es)?\b/gi, "bài kiểm tra$1"],
+  [/\bmodule(s)?\b/gi, "mô-đun$1"],
+  [/\blearning path\b/gi, "lộ trình học"],
+  [/\benrollment\b/gi, "đăng ký"],
+  [/\bskill mastery\b/gi, "mức thành thạo kỹ năng"],
+  [/\bcertification\b/gi, "chứng chỉ"],
+  [/\bbadge(s)?\b/gi, "huy hiệu$1"],
+  [/\baccount(s)?\b/gi, "tài khoản$1"],
+  [/\bthread(s)?\b/gi, "luồng thảo luận$1"],
+  // Generic
+  [/\bchecklist\b/gi, "checklist"],
+  [/\bdashboard\b/gi, "bảng tổng quan"],
+  [/\bstatus\b/gi, "trạng thái"],
+  [/\bversion(s)?\b/gi, "phiên bản$1"],
+  [/\bapproval(s)?\b/gi, "phê duyệt$1"],
+  [/\bmetrics?\b/gi, "chỉ số"],
+  [/\buptime\b/gi, "thời gian hoạt động"],
+  [/\bmaintenance\b/gi, "bảo trì"],
+  [/\binventory\b/gi, "tồn kho"],
+  [/\broute(s)?\b/gi, "tuyến$1"],
+  [/\bshipment(s)?\b/gi, "lô hàng$1"],
+  [/\bwarehouse\b/gi, "kho"],
+  [/\bcontract(s)?\b/gi, "hợp đồng$1"],
+];
+
+const translateCoreEnToVi = (value: string) => {
+  let out = value;
+  for (const [pattern, replacement] of VI_GLOSSARY) {
+    out = out.replace(pattern, replacement);
+  }
+  return out.replace(/\s+/g, " ").trim();
+};
+
+const translateLeadingVerbEnToVi = (value: string) => {
+  const mappings: Array<[RegExp, string]> = [
+    [/^Monitors?\b/i, "Theo dõi"],
+    [/^Tracks?\b/i, "Theo dõi"],
+    [/^Follows?\b/i, "Theo dõi"],
+    [/^Logs?\b/i, "Ghi nhận"],
+    [/^Records?\b/i, "Ghi lại"],
+    [/^Documents?\b/i, "Ghi nhận"],
+    [/^Ensures?\b/i, "Đảm bảo"],
+    [/^Verifies?\b/i, "Xác minh"],
+    [/^Flags?\b/i, "Gắn cờ"],
+    [/^Highlights?\b/i, "Làm nổi bật"],
+    [/^Identifies?\b/i, "Phát hiện"],
+    [/^Provides?\b/i, "Cung cấp"],
+    [/^Displays?\b/i, "Hiển thị"],
+    [/^Captures?\b/i, "Ghi lại"],
+    [/^Aggregates?\b/i, "Tổng hợp"],
+    [/^Summarizes?\b/i, "Tóm tắt"],
+    [/^Stores?\b/i, "Lưu trữ"],
+    [/^Maintains?\b/i, "Duy trì"],
+    [/^Organizes?\b/i, "Sắp xếp"],
+    [/^Manages?\b/i, "Quản lý"],
+    [/^Assigns?\b/i, "Phân công"],
+    [/^Distributes?\b/i, "Phân bổ"],
+    [/^Schedules?\b/i, "Lên lịch"],
+    [/^Plans?\b/i, "Lập kế hoạch"],
+    [/^Categorizes?\b/i, "Phân loại"],
+    [/^Classifies?\b/i, "Phân loại"],
+    [/^Marks?\b/i, "Đánh dấu"],
+    [/^Links?\b/i, "Liên kết"],
+    [/^Optimizes?\b/i, "Tối ưu"],
+    [/^Estimates?\b/i, "Ước tính"],
+    [/^Calculates?\b/i, "Tính toán"],
+    [/^Determines?\b/i, "Xác định"],
+    [/^Measures?\b/i, "Đo lường"],
+    [/^Prompts?\b/i, "Nhắc nhở"],
+    [/^Coordinates?\b/i, "Điều phối"],
+    [/^Evaluates?\b/i, "Đánh giá"],
+    [/^Guides?\b/i, "Hướng dẫn"],
+    [/^Alerts?\b/i, "Cảnh báo"],
+  ];
+
+  for (const [pattern, viVerb] of mappings) {
+    if (pattern.test(value)) {
+      return value.replace(pattern, viVerb);
+    }
+  }
+  return value;
+};
+
+export const translateDescriptionEnToVi = (value: string) => {
+  const { text, cites } = extractCites(value);
+  if (!text) return value;
+  // Avoid translating already-Vietnamese content.
+  if (looksVietnamese(text)) return value;
+
+  let out = translateLeadingVerbEnToVi(text);
+  out = translateCoreEnToVi(out);
+  out = out.replace(/\s+/g, " ").trim();
+  if (!out.endsWith(".")) out = `${stripTrailingPeriod(out)}.`;
+  if (cites) out = `${stripTrailingPeriod(out)}. ${cites}`.replace(/\s+/g, " ").trim();
+  return out;
+};
+
+const TITLE_PREFIX_VI: Record<ActionGroup, string> = {
+  track: "Theo dõi",
+  log: "Nhật ký",
+  manage: "Quản lý",
+  tag: "Gắn nhãn",
+  schedule: "Lập lịch",
+  check: "Kiểm tra",
+  calculate: "Tính toán",
+  summarize: "Tổng quan",
+  store: "Thư viện",
+  optimize: "Tối ưu",
+  compare: "So sánh",
+  recommend: "Gợi ý",
+  alert: "Cảnh báo",
+};
+
+const stripToolSuffixes = (value: string) =>
+  stripCites(value)
+    .replace(/\b(tool|tracker|dashboard|planner|scheduler|calendar|checker|calculator|library|log|logging tool|status tool)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const simplifyViSeedLabel = (value: string) =>
+  value
+    .replace(/^\s*Công cụ\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+export const translateTitleEnToVi = (title: string, explicitLabelVi?: string) => {
+  if (explicitLabelVi) {
+    const simplified = simplifyViSeedLabel(explicitLabelVi);
+    return simplified ? simplified.charAt(0).toUpperCase() + simplified.slice(1) : simplified;
+  }
+
+  const cleaned = stripCites(title).trim();
+  if (!cleaned) return "Ý tưởng";
+
+  const action = inferActionGroup(cleaned);
+  const prefix = TITLE_PREFIX_VI[action] ?? "Theo dõi";
+  const subjectEn = stripToolSuffixes(cleaned);
+  const subjectVi = translateCoreEnToVi(subjectEn.toLowerCase());
+
+  const subjectFinal = subjectVi && looksVietnamese(subjectVi) ? subjectVi : subjectEn;
+  const alreadyPrefixed = /^(theo dõi|nhật ký|quản lý|gắn nhãn|lập lịch|kiểm tra|tính toán|tổng quan|thư viện|tối ưu|so sánh|gợi ý|cảnh báo)\b/i.test(
+    subjectFinal,
+  );
+
+  const combined = alreadyPrefixed ? subjectFinal : `${prefix} ${subjectFinal}`;
+  const normalized = combined.replace(/\s+/g, " ").trim();
+  return normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : "Ý tưởng";
+};
