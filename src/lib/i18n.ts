@@ -725,8 +725,261 @@ export const seedTitleLabels: Record<string, Record<Locale, string>> = {
 export const translateCategory = (category: string, locale: Locale) =>
   categoryLabels[category]?.[locale] ?? category;
 
-export const translateSeedTitle = (title: string, locale: Locale) =>
-  seedTitleLabels[title]?.[locale] ?? title;
+const cleanSeedTitle = (value: string) => value.replace(/\[cite:\s*\d+\]/g, "").trim();
+
+const viTitleReplacements: Array<[RegExp, string]> = [
+  [/\bclient\b/g, "khách hàng"],
+  [/\bcustomer\b/g, "khách hàng"],
+  [/\bguest\b/g, "khách"],
+  [/\buser\b/g, "người dùng"],
+  [/\bstaff\b/g, "nhân viên"],
+  [/\btrainer\b/g, "huấn luyện viên"],
+  [/\bworkout plan\b/g, "kế hoạch tập luyện"],
+  [/\bworkout\b/g, "tập luyện"],
+  [/\bexercise\b/g, "bài tập"],
+  [/\bfitness\b/g, "thể hình"],
+  [/\bwellness\b/g, "sức khỏe"],
+  [/\bnutrition\b/g, "dinh dưỡng"],
+  [/\bbody[- ]?metric\b/g, "chỉ số cơ thể"],
+  [/\bsession attendance\b/g, "điểm danh buổi"],
+  [/\bgoal progress\b/g, "tiến độ mục tiêu"],
+  [/\bschedule conflict\b/g, "xung đột lịch"],
+  [/\bequipment maintenance\b/g, "bảo trì thiết bị"],
+  [/\bmembership type\b/g, "loại hội viên"],
+  [/\bclass capacity\b/g, "sức chứa lớp"],
+  [/\binjury risk\b/g, "rủi ro chấn thương"],
+  [/\bsleep habit\b/g, "thói quen ngủ"],
+  [/\bwellness coach\b/g, "huấn luyện viên sức khỏe"],
+  [/\bgroup challenge\b/g, "thử thách nhóm"],
+  [/\bexercise video\b/g, "video bài tập"],
+  [/\bfeature request\b/g, "yêu cầu tính năng"],
+  [/\bbug priority\b/g, "độ ưu tiên lỗi"],
+  [/\brelease note\b/g, "ghi chú phát hành"],
+  [/\bonboarding\b/g, "nhập môn"],
+  [/\btrial-to-paid conversion\b/g, "chuyển từ dùng thử sang trả phí"],
+  [/\bapi usage quota\b/g, "hạn mức sử dụng API"],
+  [/\bfield customization\b/g, "tùy chỉnh trường"],
+  [/\bupgrade path\b/g, "lộ trình nâng cấp"],
+  [/\bfeature deprecation\b/g, "ngừng hỗ trợ tính năng"],
+  [/\bpermission role\b/g, "vai trò quyền truy cập"],
+  [/\bintegration status\b/g, "trạng thái tích hợp"],
+  [/\bsupport ticket\b/g, "phiếu hỗ trợ"],
+  [/\bfeature adoption heatmap\b/g, "bản đồ nhiệt mức độ sử dụng tính năng"],
+  [/\bannouncement[s]? targeting\b/g, "nhắm mục tiêu thông báo"],
+  [/\bguest reservation status\b/g, "trạng thái đặt phòng"],
+  [/\broom cleaning status\b/g, "trạng thái dọn phòng"],
+  [/\bcheck-in document\b/g, "giấy tờ nhận phòng"],
+  [/\bupsell opportunity\b/g, "cơ hội bán thêm"],
+  [/\bguest preference\b/g, "sở thích khách"],
+  [/\bloyalty stay\b/g, "số đêm tích lũy"],
+  [/\bhousekeeping task\b/g, "nhiệm vụ dọn phòng"],
+  [/\bmaintenance request\b/g, "yêu cầu bảo trì"],
+  [/\bguest incident\b/g, "sự cố của khách"],
+  [/\blocal attraction\b/g, "điểm tham quan gần đó"],
+  [/\bgroup booking\b/g, "đặt nhóm"],
+  [/\bhouse rule\b/g, "nội quy"],
+  [/\bearly check-in\b/g, "nhận phòng sớm"],
+  [/\blate check-out\b/g, "trả phòng muộn"],
+  [/\bguest feedback\b/g, "phản hồi khách"],
+  [/\barticle draft\b/g, "bản nháp bài viết"],
+  [/\bcontent calendar\b/g, "lịch nội dung"],
+  [/\btopic tagging\b/g, "gắn nhãn chủ đề"],
+  [/\bwriter assignment\b/g, "phân công người viết"],
+  [/\bimage rights\b/g, "quyền sử dụng hình ảnh"],
+  [/\bpublishing approval\b/g, "phê duyệt xuất bản"],
+  [/\bcopyright expiration\b/g, "hết hạn bản quyền"],
+  [/\baudio-clip asset\b/g, "tài sản âm thanh"],
+  [/\bepisode release\b/g, "phát hành tập"],
+  [/\binterview transcript\b/g, "bản chép lời phỏng vấn"],
+  [/\bcontent repurposing\b/g, "tái sử dụng nội dung"],
+  [/\bseo keyword\b/g, "từ khóa SEO"],
+  [/\banalytics metric snapshot\b/g, "ảnh chụp chỉ số phân tích"],
+  [/\bcontributor contract\b/g, "hợp đồng cộng tác viên"],
+  [/\bcontent localization\b/g, "bản địa hóa nội dung"],
+  [/\bloan application\b/g, "hồ sơ vay"],
+  [/\bcredit score snapshot\b/g, "ảnh chụp điểm tín dụng"],
+  [/\btransaction category\b/g, "danh mục giao dịch"],
+  [/\bbudget line\b/g, "dòng ngân sách"],
+  [/\binvestment goal\b/g, "mục tiêu đầu tư"],
+  [/\bfee type\b/g, "loại phí"],
+  [/\baccount relationship\b/g, "quan hệ tài khoản"],
+  [/\bcompliance requirement\b/g, "yêu cầu tuân thủ"],
+  [/\bkyc document\b/g, "tài liệu KYC"],
+  [/\bpayment method\b/g, "phương thức thanh toán"],
+  [/\bfraud indicator\b/g, "dấu hiệu gian lận"],
+  [/\brisk profile\b/g, "hồ sơ rủi ro"],
+  [/\bsubscription billing\b/g, "thanh toán thuê bao"],
+  [/\btax category\b/g, "danh mục thuế"],
+  [/\bportfolio allocation\b/g, "phân bổ danh mục"],
+  [/\border tracking\b/g, "theo dõi đơn hàng"],
+  [/\btable assignment\b/g, "phân bàn"],
+  [/\bstaff scheduling\b/g, "lập lịch nhân viên"],
+  [/\bingredient inventory\b/g, "tồn kho nguyên liệu"],
+  [/\bdaily sales summary\b/g, "tóm tắt doanh thu hằng ngày"],
+  [/\bmenu item popularity\b/g, "độ phổ biến món"],
+  [/\bcustomer feedback collection\b/g, "thu thập phản hồi khách hàng"],
+  [/\breservation waitlist\b/g, "danh sách chờ đặt bàn"],
+  [/\bspecial-diet request\b/g, "yêu cầu chế độ ăn đặc biệt"],
+  [/\bkitchen station status\b/g, "trạng thái quầy bếp"],
+  [/\bstaff shift checklist\b/g, "danh sách việc ca làm"],
+  [/\bvendor delivery log\b/g, "nhật ký giao hàng nhà cung cấp"],
+  [/\bwaste tracking\b/g, "theo dõi lãng phí"],
+  [/\bloyalty program points\b/g, "điểm chương trình khách thân thiết"],
+  [/\btable turnover timer\b/g, "bộ đếm vòng bàn"],
+  [/\bstore inventory count\b/g, "kiểm kê cửa hàng"],
+  [/\bprice tag change\b/g, "thay đổi nhãn giá"],
+  [/\breturn reason tagging\b/g, "gắn nhãn lý do trả hàng"],
+  [/\bcustomer loyalty tier\b/g, "hạng khách thân thiết"],
+  [/\bpromotion performance\b/g, "hiệu quả khuyến mãi"],
+  [/\bshelf placement planner\b/g, "lập kế hoạch trưng bày kệ"],
+  [/\bloss prevention incident log\b/g, "nhật ký sự cố chống thất thoát"],
+  [/\bemployee task checklist\b/g, "danh sách việc nhân viên"],
+  [/\bvendor rebate\b/g, "hoàn tiền nhà cung cấp"],
+  [/\bproduct category tagging\b/g, "gắn nhãn danh mục sản phẩm"],
+  [/\bclearance item status\b/g, "trạng thái hàng thanh lý"],
+  [/\bonline to offline order\b/g, "đơn hàng online-to-offline"],
+  [/\bstaff training completion\b/g, "hoàn thành đào tạo nhân viên"],
+  [/\bcustomer size preference\b/g, "sở thích kích cỡ khách hàng"],
+  [/\bgift card balance\b/g, "số dư thẻ quà tặng"],
+  [/\bshipment tracking status\b/g, "trạng thái theo dõi lô hàng"],
+  [/\bdelivery route planner\b/g, "lập tuyến giao hàng"],
+  [/\bdriver duty log\b/g, "nhật ký ca lái xe"],
+  [/\bwarehouse zone assignment\b/g, "phân khu kho"],
+  [/\bfreight cost estimation\b/g, "ước tính chi phí vận chuyển"],
+  [/\bimport document status\b/g, "trạng thái giấy tờ nhập khẩu"],
+  [/\bvehicle maintenance\b/g, "bảo trì xe"],
+  [/\bdock door scheduling\b/g, "lịch cửa bốc dỡ"],
+  [/\bcargo damage log\b/g, "nhật ký hư hại hàng hóa"],
+  [/\bcarrier performance\b/g, "hiệu suất nhà vận chuyển"],
+  [/\bcustoms clearance status\b/g, "trạng thái thông quan"],
+  [/\bpickup request\b/g, "yêu cầu nhận hàng"],
+  [/\blast-mile delivery status\b/g, "trạng thái giao chặng cuối"],
+  [/\bload weight logging\b/g, "ghi nhận trọng lượng hàng"],
+  [/\bhazardous material tag\b/g, "thẻ hàng nguy hiểm"],
+  [/\bproperty listing status\b/g, "trạng thái tin đăng"],
+  [/\blead follow-up reminder\b/g, "nhắc theo dõi khách tiềm năng"],
+  [/\bopen house visitor\b/g, "khách tham quan mở bán"],
+  [/\bcommission split calculator\b/g, "tính chia hoa hồng"],
+  [/\blease term\b/g, "thời hạn thuê"],
+  [/\bproperty inspection checklist\b/g, "danh sách kiểm tra bất động sản"],
+  [/\btenant screening status\b/g, "trạng thái sàng lọc người thuê"],
+  [/\bmarket price comparison\b/g, "so sánh giá thị trường"],
+  [/\bshowing schedule planner\b/g, "lập lịch xem nhà"],
+  [/\bcontract milestone\b/g, "cột mốc hợp đồng"],
+  [/\butility read-in readout\b/g, "ghi chỉ số đồng hồ tiện ích"],
+  [/\bproperty renovation log\b/g, "nhật ký cải tạo bất động sản"],
+  [/\bneighborhood data tagging\b/g, "gắn nhãn dữ liệu khu vực"],
+  [/\boffer status comparison\b/g, "so sánh trạng thái đề nghị"],
+  [/\bmachine uptime logging\b/g, "ghi nhận thời gian hoạt động máy"],
+  [/\bdefect type tagging\b/g, "gắn nhãn loại lỗi"],
+  [/\bwork order progress\b/g, "tiến độ lệnh sản xuất"],
+  [/\braw material consumption\b/g, "tiêu hao nguyên liệu"],
+  [/\bquality control checklist\b/g, "danh sách kiểm tra chất lượng"],
+  [/\bshift productivity\b/g, "năng suất theo ca"],
+  [/\btool calibration schedule\b/g, "lịch hiệu chuẩn dụng cụ"],
+  [/\bsafety incident log\b/g, "nhật ký sự cố an toàn"],
+  [/\bproduction batch tracking\b/g, "theo dõi lô sản xuất"],
+  [/\bmaintenance work order\b/g, "lệnh bảo trì"],
+  [/\bsupplier quality score\b/g, "điểm chất lượng nhà cung cấp"],
+  [/\bcapacity planning helper\b/g, "trợ lý lập kế hoạch năng lực"],
+  [/\bchange order tracking\b/g, "theo dõi thay đổi đơn hàng"],
+  [/\bwaste material logging\b/g, "ghi nhận vật liệu thải"],
+  [/\bequipment location\b/g, "vị trí thiết bị"],
+  [/\bclient contact log\b/g, "nhật ký liên hệ khách hàng"],
+  [/\bproposal status\b/g, "trạng thái đề xuất"],
+  [/\btime entry verification\b/g, "xác minh thời gian làm việc"],
+  [/\bdocument version comparison\b/g, "so sánh phiên bản tài liệu"],
+  [/\bconflict of interest checker\b/g, "kiểm tra xung đột lợi ích"],
+  [/\bmatter status dashboard\b/g, "bảng điều khiển trạng thái hồ sơ"],
+  [/\bbilling milestone\b/g, "cột mốc tính phí"],
+  [/\bexpertise skill tagging\b/g, "gắn nhãn chuyên môn"],
+  [/\bknowledge base tagging\b/g, "gắn nhãn cơ sở tri thức"],
+  [/\bclient project timeline\b/g, "dòng thời gian dự án khách hàng"],
+  [/\bretainer usage\b/g, "mức sử dụng gói duy trì"],
+  [/\btask delegation\b/g, "phân công nhiệm vụ"],
+  [/\bmeeting agenda library\b/g, "thư viện chương trình họp"],
+  [/\bengagement risk tagging\b/g, "gắn nhãn rủi ro hợp đồng"],
+  [/\bblueprint version\b/g, "phiên bản bản vẽ"],
+  [/\btrade subcontractor\b/g, "nhà thầu phụ"],
+  [/\bchange order\b/g, "thay đổi hạng mục"],
+  [/\bdaily site report\b/g, "báo cáo công trường hằng ngày"],
+  [/\bsafety inspection\b/g, "kiểm tra an toàn"],
+  [/\bmaterial delivery\b/g, "giao vật liệu"],
+  [/\bwork-in-progress photography\b/g, "nhật ký ảnh tiến độ"],
+  [/\bpunch list\b/g, "danh sách sửa lỗi"],
+  [/\bcrane and equipment\b/g, "cẩu và thiết bị"],
+  [/\bpermit status\b/g, "trạng thái giấy phép"],
+  [/\bquality inspection\b/g, "kiểm tra chất lượng"],
+  [/\bsubcontractor safety training\b/g, "đào tạo an toàn nhà thầu phụ"],
+  [/\bsite access\b/g, "ra vào công trường"],
+  [/\bweather disruption\b/g, "gián đoạn do thời tiết"],
+  [/\bconstruction cost variance\b/g, "chênh lệch chi phí xây dựng"],
+  [/\bdonor contact history\b/g, "lịch sử liên hệ nhà tài trợ"],
+  [/\bgrant application status\b/g, "trạng thái hồ sơ tài trợ"],
+  [/\bvolunteer shift log\b/g, "nhật ký ca tình nguyện"],
+  [/\bcampaign impact tagging\b/g, "gắn nhãn tác động chiến dịch"],
+  [/\bevent attendance\b/g, "điểm danh sự kiện"],
+  [/\bprogram outcome metric\b/g, "chỉ số kết quả chương trình"],
+  [/\bdonation source\b/g, "nguồn đóng góp"],
+  [/\bin-kind donation\b/g, "quyên góp hiện vật"],
+  [/\bbeneficiary intake form\b/g, "biểu mẫu tiếp nhận người thụ hưởng"],
+  [/\bvolunteer skill\b/g, "kỹ năng tình nguyện viên"],
+  [/\bmatching gift\b/g, "quà tặng đối ứng"],
+  [/\breporting deadline reminder\b/g, "nhắc thời hạn báo cáo"],
+  [/\bpartner organization\b/g, "tổ chức đối tác"],
+  [/\badvocacy action\b/g, "hành động vận động"],
+  [/\bcommunity feedback\b/g, "phản hồi cộng đồng"],
+];
+
+const translateGeneratedSeedTitleVi = (title: string) => {
+  const cleaned = cleanSeedTitle(title).replace(/\s*tool$/i, "").replace(/\s*tracker$/i, "").trim();
+  let value = cleaned.toLowerCase();
+  for (const [pattern, replacement] of viTitleReplacements) {
+    value = value.replace(pattern, replacement);
+  }
+
+  value = value
+    .replace(/\s+/g, " ")
+    .replace(/\b(of|and|the|to|for|from|in|on|at|with|by)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!value) return "Ý tưởng";
+
+  const suffixPrefix = /dashboard$/.test(cleaned)
+    ? "Bảng điều khiển"
+    : /summary$/.test(cleaned)
+      ? "Tóm tắt"
+      : /planner$/.test(cleaned) || /scheduler$/.test(cleaned) || /schedule$/.test(cleaned)
+        ? "Công cụ lập kế hoạch"
+        : /checker$/.test(cleaned)
+          ? "Công cụ kiểm tra"
+          : /calculator$/.test(cleaned)
+            ? "Công cụ tính toán"
+            : /log$/.test(cleaned) || /logging tool$/.test(cleaned)
+              ? "Nhật ký"
+              : /tracking tool$/.test(cleaned) || /tracker$/.test(cleaned)
+                ? "Công cụ theo dõi"
+                : /tagging tool$/.test(cleaned)
+                  ? "Công cụ gắn nhãn"
+                  : /comparison tool$/.test(cleaned)
+                    ? "Công cụ so sánh"
+                    : /status tool$/.test(cleaned) || /status tracker$/.test(cleaned)
+                      ? "Công cụ trạng thái"
+                      : "Công cụ";
+
+  return `${suffixPrefix} ${value}`.replace(/\s+/g, " ").trim();
+};
+
+export const translateSeedTitle = (title: string, locale: Locale) => {
+  const cleaned = cleanSeedTitle(title);
+  const explicit = seedTitleLabels[cleaned]?.[locale];
+  if (explicit) return explicit;
+  if (locale === "vi") {
+    return translateGeneratedSeedTitleVi(cleaned);
+  }
+  return cleaned;
+};
 
 export const getUiCopy = (locale: Locale) => uiCopy[locale];
 
@@ -735,38 +988,21 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
   const isSeed = idea.source === "seed";
   const category = translateCategory(idea.category, locale);
   const title = isSeed ? translateSeedTitle(idea.title, locale) : idea.title;
-  const usesStoredCopy =
-    isSeed &&
-    [
-      "Fitness & Wellness",
-      "SaaS/Software Products",
-      "Travel & Hospitality",
-      "Media & Content",
-      "Fintech/Financial Services",
-    ].includes(idea.category);
   const summary =
-    usesStoredCopy
-      ? idea.summary
-      : isSeed && locale === "vi"
-        ? `Công cụ vi mô cho ${stripTrailingToolSuffix(title, locale)} trong lĩnh vực ${category.toLowerCase()}.`
-        : isSeed && locale === "en"
-        ? `A focused ${idea.category.toLowerCase()} micro-tool for ${stripTrailingToolSuffix(title, locale)}.`
+    isSeed && locale === "vi"
+      ? `Công cụ vi mô cho ${stripTrailingToolSuffix(title, locale)} trong lĩnh vực ${category.toLowerCase()}.`
+      : isSeed && locale === "en"
+        ? idea.summary
         : idea.summary;
   const details =
-    usesStoredCopy
-      ? idea.details
-      : isSeed && locale === "vi"
-        ? [
-            `Ý tưởng này thuộc nhóm ${category.toLowerCase()} và xoay quanh ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`,
-            "Nó phù hợp khi quy trình cần một thao tác ngắn, trạng thái rõ ràng và bàn giao gọn trên di động.",
-            "Điều đó khiến nó rất hợp với luồng rà soát ý tưởng nhanh của ứng dụng này.",
-          ].join(" ")
-        : isSeed && locale === "en"
-        ? [
-            `This idea sits in ${idea.category} and is built around ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`,
-            "It works best when the workflow needs one short action, a simple status, and a clear handoff.",
-            "That makes it a good fit for a mobile-first tool review workflow.",
-          ].join(" ")
+    isSeed && locale === "vi"
+      ? [
+          `Ý tưởng này thuộc nhóm ${category.toLowerCase()} và xoay quanh ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`,
+          "Nó phù hợp khi quy trình cần một thao tác ngắn, trạng thái rõ ràng và bàn giao gọn trên di động.",
+          "Điều đó khiến nó rất hợp với luồng rà soát ý tưởng nhanh của ứng dụng này.",
+        ].join(" ")
+      : isSeed && locale === "en"
+        ? idea.details
         : idea.details;
 
   return {
@@ -802,7 +1038,7 @@ export const getDraftDetails = (locale: Locale, category: string, title: string)
 
 const stripTrailingToolSuffix = (value: string, locale: Locale) => {
   if (locale === "vi") {
-    return value.replace(/^Công cụ\s+/i, "").trim();
+    return value.replace(/^(Công cụ|Nhật ký|Bảng điều khiển|Tóm tắt)\s+/i, "").trim();
   }
   return value.replace(/\s*tool$/i, "").trim();
 };
