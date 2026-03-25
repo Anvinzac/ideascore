@@ -20,6 +20,12 @@ const supabase = hasRemoteConfig
     })
   : null;
 
+const capitalizeFirstLetter = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
+
 type IdeaRow = {
   id: string;
   title: string;
@@ -36,7 +42,7 @@ type IdeaRow = {
 
 const toIdea = (row: IdeaRow): Idea => ({
   id: row.id,
-  title: row.title,
+  title: row.is_custom ? row.title : capitalizeFirstLetter(row.title),
   category: row.category,
   summary: row.summary,
   details: row.details,
@@ -110,6 +116,15 @@ export const loadIdeas = async (): Promise<Idea[]> => {
   }
 
   const remoteIdeas = (data as IdeaRow[]).map(toIdea);
+  const normalizedRemoteIdeas = remoteIdeas.map((idea) =>
+    idea.source === "seed" ? { ...idea, title: capitalizeFirstLetter(idea.title) } : idea,
+  );
+  const changedRemoteIdeas = normalizedRemoteIdeas.filter(
+    (idea, index) => idea.title !== remoteIdeas[index].title,
+  );
+  if (changedRemoteIdeas.length > 0) {
+    await client.from(TABLE_NAME).upsert(changedRemoteIdeas.map(fromIdea), { onConflict: "id" });
+  }
   const remoteIds = new Set(remoteIdeas.map((idea) => idea.id));
   const missingSeedIdeas = seedIdeas.filter((idea) => !remoteIds.has(idea.id));
 
@@ -123,7 +138,7 @@ export const loadIdeas = async (): Promise<Idea[]> => {
     return merged;
   }
 
-  const merged = mergeIdeas(seedIdeas, remoteIdeas);
+  const merged = mergeIdeas(seedIdeas, normalizedRemoteIdeas);
   const finalIdeas = mergeIdeas(merged, readCachedIdeas());
   cacheIdeas(finalIdeas);
   return finalIdeas;

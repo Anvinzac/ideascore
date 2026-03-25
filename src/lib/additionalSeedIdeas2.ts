@@ -17,6 +17,12 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const capitalizeFirstLetter = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
+
 const groups: SeedGroup[] = [
   {
     category: "Restaurants",
@@ -149,13 +155,13 @@ const groups: SeedGroup[] = [
       { name: "Material delivery log tool [cite: 313]", description: "Records the arrival of lumber, concrete, or steel at the job site." },
       { name: "Work-in-progress photography log [cite: 314]", description: "Archives visual evidence of construction phases for client updates or disputes." },
       { name: "Punch list tracker [cite: 315]", description: "Manages minor fixes and finishing touches required before project handover." },
-      { name: "crane and equipment log tool [cite: 316]", description: "Monitors the usage hours and rental status of heavy machinery." },
+      { name: "Crane and equipment log tool [cite: 316]", description: "Monitors the usage hours and rental status of heavy machinery." },
       { name: "Permit status tracker [cite: 317]", description: "Monitors applications pending with local government zoning or building departments." },
       { name: "Quality inspection checklist tool [cite: 318]", description: "Ensures completed work meets engineering specifications and standards." },
-      { name: "subcontractor safety training tracker [cite: 319]", description: "Verifies all site workers have completed required hazard awareness courses." },
-      { name: "site access log tool [cite: 320]", description: "Records which personnel entered and exited the secure construction zone." },
-      { name: "weather disruption log tool [cite: 321]", description: "Documents rain or storm delays that impact the project timeline." },
-      { name: "construction cost variance tracker [cite: 322]", description: "Compares actual spending on labor and materials against the original estimate." },
+      { name: "Subcontractor safety training tracker [cite: 319]", description: "Verifies all site workers have completed required hazard awareness courses." },
+      { name: "Site access log tool [cite: 320]", description: "Records which personnel entered and exited the secure construction zone." },
+      { name: "Weather disruption log tool [cite: 321]", description: "Documents rain or storm delays that impact the project timeline." },
+      { name: "Construction cost variance tracker [cite: 322]", description: "Compares actual spending on labor and materials against the original estimate." },
     ],
   },
   {
@@ -183,9 +189,10 @@ const groups: SeedGroup[] = [
 export const moreSeedIdeas: Idea[] = groups.flatMap((group, categoryIndex) =>
   group.items.map((item, itemIndex) => {
     const createdAt = new Date(Date.UTC(2026, 2, 3, 0, categoryIndex, itemIndex)).toISOString();
+    const normalizedName = capitalizeFirstLetter(item.name);
     return {
-      id: `additional-2-${slugify(group.category)}-${slugify(item.name)}`,
-      title: item.name,
+      id: `additional-2-${slugify(group.category)}-${slugify(normalizedName)}`,
+      title: normalizedName,
       category: group.category,
       summary: item.description,
       details: item.description,

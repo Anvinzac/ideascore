@@ -257,6 +257,12 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const capitalizeFirstLetter = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
+
 const makeSummary = (category: string, title: string) => {
   const override = seedDescriptionOverrides.get(normalizeIdeaTitleKey(title));
   if (override) {
@@ -283,13 +289,14 @@ export const buildSeedIdeas = (): Idea[] =>
   [
     ...seedCategories.flatMap((group, categoryIndex) =>
       group.items.map((title, itemIndex) => {
+        const normalizedTitle = capitalizeFirstLetter(title);
         const createdAt = new Date(Date.UTC(2026, 2, 1, 0, categoryIndex, itemIndex)).toISOString();
         return {
-          id: `${slugify(group.category)}-${slugify(title)}`,
-          title,
+          id: `${slugify(group.category)}-${slugify(normalizedTitle)}`,
+          title: normalizedTitle,
           category: group.category,
-          summary: makeSummary(group.category, title),
-          details: makeDetails(group.category, title),
+          summary: makeSummary(group.category, normalizedTitle),
+          details: makeDetails(group.category, normalizedTitle),
           rating: 0 as const,
           note: "",
           source: "seed" as const,

@@ -65,7 +65,7 @@ export const uiCopy = {
     noMatch: "Không có ý tưởng nào khớp với bộ lọc hiện tại.",
     mobileBlurb:
       "Giao diện di động với danh mục có thể thu gọn, chấm điểm bằng sao, ghi chú và nút xem ngẫu nhiên từng ý tưởng một.",
-    defaultDraftSummary: "Một ý tưởng vi mô gọn nhẹ, phù hợp cho quy trình di động.",
+    defaultDraftSummary: "Một ý tưởng gọn nhẹ, phù hợp cho quy trình di động.",
     defaultDraftDetails:
       "Ý tưởng này phù hợp khi bạn cần một thao tác ngắn, trạng thái rõ ràng và luồng làm việc gọn gàng trên điện thoại.",
     importedLabel: "Đã nhập",
@@ -1067,11 +1067,13 @@ const translateGeneratedSeedTitleVi = (title: string) => {
     value,
   );
 
-  if (alreadyNatural) {
-    return value;
-  }
+  const translated = alreadyNatural
+    ? value
+    : suffixPrefix
+      ? `${suffixPrefix} ${value}`.replace(/\s+/g, " ").trim()
+      : value;
 
-  return suffixPrefix ? `${suffixPrefix} ${value}`.replace(/\s+/g, " ").trim() : value;
+  return translated.charAt(0).toUpperCase() + translated.slice(1);
 };
 
 export const translateSeedTitle = (title: string, locale: Locale) => {
@@ -1081,7 +1083,7 @@ export const translateSeedTitle = (title: string, locale: Locale) => {
   if (locale === "vi") {
     return translateGeneratedSeedTitleVi(cleaned);
   }
-  return cleaned;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 };
 
 export const getUiCopy = (locale: Locale) => uiCopy[locale];
@@ -1093,7 +1095,7 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
   const title = isSeed ? translateSeedTitle(idea.title, locale) : idea.title;
   const summary =
     isSeed && locale === "vi"
-      ? `Công cụ vi mô cho ${stripTrailingToolSuffix(title, locale)} trong lĩnh vực ${category.toLowerCase()}.`
+      ? `Ý tưởng này thuộc nhóm ${category.toLowerCase()} và xoay quanh ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`
       : isSeed && locale === "en"
         ? idea.summary
         : idea.summary;
@@ -1121,7 +1123,7 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
 
 export const getDraftSummary = (locale: Locale, category: string, title: string) => {
   if (locale === "vi") {
-    return `Một ý tưởng vi mô gọn nhẹ cho ${translateCategory(category, locale).toLowerCase()} xoay quanh ${title.trim().toLowerCase()}.`;
+    return `Một ý tưởng gọn nhẹ cho ${translateCategory(category, locale).toLowerCase()} xoay quanh ${title.trim().toLowerCase()}.`;
   }
   return `A compact micro-tool idea for ${category.toLowerCase()} focused on ${title.trim().toLowerCase()}.`;
 };
