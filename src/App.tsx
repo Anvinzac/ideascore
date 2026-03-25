@@ -331,20 +331,26 @@ const App = () => {
         <div className="topbar-copy">
           <div className="topbar-title-row">
             <span className="eyebrow">{ui.appName}</span>
-            <div className="language-switcher" role="tablist" aria-label={ui.language}>
+            <div className="language-switcher" role="group" aria-label={ui.language}>
               <button
                 type="button"
-                className={`language-chip ${locale === "vi" ? "active" : ""}`}
+                className={`language-flag ${locale === "vi" ? "active" : ""}`}
                 onClick={() => setLanguage("vi")}
+                aria-pressed={locale === "vi"}
+                aria-label={ui.vietnamese}
+                title={ui.vietnamese}
               >
-                {ui.vietnamese}
+                <span aria-hidden="true">🇻🇳</span>
               </button>
               <button
                 type="button"
-                className={`language-chip ${locale === "en" ? "active" : ""}`}
+                className={`language-flag ${locale === "en" ? "active" : ""}`}
                 onClick={() => setLanguage("en")}
+                aria-pressed={locale === "en"}
+                aria-label={ui.english}
+                title={ui.english}
               >
-                {ui.english}
+                <span aria-hidden="true">🇺🇸</span>
               </button>
             </div>
           </div>
