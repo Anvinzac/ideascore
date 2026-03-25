@@ -1,5 +1,6 @@
 import type { Idea } from "../types";
 import { normalizeIdeaTitleKey, seedDescriptionOverrides } from "./descriptionOverrides";
+import { additionalSeedCategories, additionalSeedIdeas } from "./additionalSeedIdeas";
 
 export const seedCategories = [
   {
@@ -244,7 +245,7 @@ export const seedCategories = [
   },
 ] as const;
 
-export const categoryOrder = seedCategories.map((entry) => entry.category);
+export const categoryOrder = [...seedCategories.map((entry) => entry.category), ...additionalSeedCategories];
 
 const slugify = (value: string) =>
   value
@@ -276,27 +277,30 @@ const makeDetails = (category: string, title: string) => {
 };
 
 export const buildSeedIdeas = (): Idea[] =>
-  seedCategories.flatMap((group, categoryIndex) =>
-    group.items.map((title, itemIndex) => {
-      const createdAt = new Date(Date.UTC(2026, 2, 1, 0, categoryIndex, itemIndex)).toISOString();
-      return {
-        id: `${slugify(group.category)}-${slugify(title)}`,
-        title,
-        category: group.category,
-        summary: makeSummary(group.category, title),
-        details: makeDetails(group.category, title),
-        rating: 0 as const,
-        note: "",
-        source: "seed" as const,
-        sortIndex: categoryIndex * 100 + itemIndex,
-        createdAt,
-        updatedAt: createdAt,
-      };
-    }),
-  );
+  [
+    ...seedCategories.flatMap((group, categoryIndex) =>
+      group.items.map((title, itemIndex) => {
+        const createdAt = new Date(Date.UTC(2026, 2, 1, 0, categoryIndex, itemIndex)).toISOString();
+        return {
+          id: `${slugify(group.category)}-${slugify(title)}`,
+          title,
+          category: group.category,
+          summary: makeSummary(group.category, title),
+          details: makeDetails(group.category, title),
+          rating: 0 as const,
+          note: "",
+          source: "seed" as const,
+          sortIndex: categoryIndex * 100 + itemIndex,
+          createdAt,
+          updatedAt: createdAt,
+        };
+      }),
+    ),
+    ...additionalSeedIdeas,
+  ];
 
 export const isSeedCategory = (value: string) =>
-  seedCategories.some((entry) => entry.category === value);
+  seedCategories.some((entry) => entry.category === value) || additionalSeedCategories.includes(value);
 
 export const createDefaultIdea = (category: string, title = "Untitled idea"): Idea => {
   const createdAt = new Date().toISOString();

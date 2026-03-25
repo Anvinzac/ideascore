@@ -109,17 +109,24 @@ export const loadIdeas = async (): Promise<Idea[]> => {
     return merged;
   }
 
+  const remoteIdeas = (data as IdeaRow[]).map(toIdea);
+  const remoteIds = new Set(remoteIdeas.map((idea) => idea.id));
+  const missingSeedIdeas = seedIdeas.filter((idea) => !remoteIds.has(idea.id));
+
+  if (missingSeedIdeas.length > 0) {
+    await client.from(TABLE_NAME).upsert(missingSeedIdeas.map(fromIdea), { onConflict: "id" });
+  }
+
   if (!data || data.length === 0) {
-    await client.from(TABLE_NAME).upsert(seedIdeas.map(fromIdea), { onConflict: "id" });
     const merged = mergeIdeas(seedIdeas, readCachedIdeas());
     cacheIdeas(merged);
     return merged;
   }
 
-  const remoteIdeas = (data as IdeaRow[]).map(toIdea);
-  const merged = mergeIdeas(remoteIdeas, readCachedIdeas());
-  cacheIdeas(merged);
-  return merged;
+  const merged = mergeIdeas(seedIdeas, remoteIdeas);
+  const finalIdeas = mergeIdeas(merged, readCachedIdeas());
+  cacheIdeas(finalIdeas);
+  return finalIdeas;
 };
 
 export const saveIdea = async (idea: Idea) => {

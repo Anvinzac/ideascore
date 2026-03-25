@@ -154,6 +154,14 @@ export const categoryLabels: Record<string, Record<Locale, string>> = {
   Nonprofits: { vi: "Phi lợi nhuận", en: "Nonprofits" },
   Finance: { vi: "Tài chính", en: "Finance" },
   Marketing: { vi: "Tiếp thị", en: "Marketing" },
+  "Fitness & Wellness": { vi: "Thể hình & Sức khỏe", en: "Fitness & Wellness" },
+  "SaaS/Software Products": { vi: "SaaS / Phần mềm", en: "SaaS/Software Products" },
+  "Travel & Hospitality": { vi: "Du lịch & Lưu trú", en: "Travel & Hospitality" },
+  "Media & Content": { vi: "Truyền thông & Nội dung", en: "Media & Content" },
+  "Fintech/Financial Services": {
+    vi: "Fintech / Dịch vụ tài chính",
+    en: "Fintech/Financial Services",
+  },
 };
 
 export const seedTitleLabels: Record<string, Record<Locale, string>> = {
@@ -727,20 +735,33 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
   const isSeed = idea.source === "seed";
   const category = translateCategory(idea.category, locale);
   const title = isSeed ? translateSeedTitle(idea.title, locale) : idea.title;
+  const usesStoredCopy =
+    isSeed &&
+    [
+      "Fitness & Wellness",
+      "SaaS/Software Products",
+      "Travel & Hospitality",
+      "Media & Content",
+      "Fintech/Financial Services",
+    ].includes(idea.category);
   const summary =
-    isSeed && locale === "vi"
-      ? `Công cụ vi mô cho ${stripTrailingToolSuffix(title, locale)} trong lĩnh vực ${category.toLowerCase()}.`
-      : isSeed && locale === "en"
+    usesStoredCopy
+      ? idea.summary
+      : isSeed && locale === "vi"
+        ? `Công cụ vi mô cho ${stripTrailingToolSuffix(title, locale)} trong lĩnh vực ${category.toLowerCase()}.`
+        : isSeed && locale === "en"
         ? `A focused ${idea.category.toLowerCase()} micro-tool for ${stripTrailingToolSuffix(title, locale)}.`
         : idea.summary;
   const details =
-    isSeed && locale === "vi"
-      ? [
-          `Ý tưởng này thuộc nhóm ${category.toLowerCase()} và xoay quanh ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`,
-          "Nó phù hợp khi quy trình cần một thao tác ngắn, trạng thái rõ ràng và bàn giao gọn trên di động.",
-          "Điều đó khiến nó rất hợp với luồng rà soát ý tưởng nhanh của ứng dụng này.",
-        ].join(" ")
-      : isSeed && locale === "en"
+    usesStoredCopy
+      ? idea.details
+      : isSeed && locale === "vi"
+        ? [
+            `Ý tưởng này thuộc nhóm ${category.toLowerCase()} và xoay quanh ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`,
+            "Nó phù hợp khi quy trình cần một thao tác ngắn, trạng thái rõ ràng và bàn giao gọn trên di động.",
+            "Điều đó khiến nó rất hợp với luồng rà soát ý tưởng nhanh của ứng dụng này.",
+          ].join(" ")
+        : isSeed && locale === "en"
         ? [
             `This idea sits in ${idea.category} and is built around ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`,
             "It works best when the workflow needs one short action, a simple status, and a clear handoff.",
