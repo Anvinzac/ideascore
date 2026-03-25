@@ -32,10 +32,6 @@ type IdeaDraft = {
   rating: Rating;
 };
 
-// Temporary safety switch: Vietnamese translations are currently error-prone, so we force English-only UI.
-// Flip to `false` later to re-enable the VN flag + translations.
-const HIDE_VI_TRANSLATIONS = true;
-
 const normalizeDisplayTitle = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
 
 type CategoryTheme = { bg: string; border: string; text: string };
@@ -104,9 +100,9 @@ const initialDraft = (category = categoryOrder[0] ?? "General"): IdeaDraft => ({
 const App = () => {
   const [locale, setLocale] = useState<Locale>(() => {
     if (typeof window === "undefined") return "en";
-    if (HIDE_VI_TRANSLATIONS) return "en";
     const stored = window.localStorage.getItem("micro-tool-lab:locale");
-    return stored === "en" ? "en" : "vi";
+    if (stored === "vi" || stored === "en") return stored;
+    return "en";
   });
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,8 +118,7 @@ const App = () => {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [syncError, setSyncError] = useState<string | null>(null);
   const categoryMenuRef = useRef<HTMLDivElement | null>(null);
-  const effectiveLocale: Locale = HIDE_VI_TRANSLATIONS ? "en" : locale;
-  const ui = getUiCopy(effectiveLocale);
+  const ui = getUiCopy(locale);
 
   useEffect(() => {
     let cancelled = false;
@@ -147,9 +142,9 @@ const App = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem("micro-tool-lab:locale", effectiveLocale);
-    document.documentElement.lang = effectiveLocale;
-  }, [effectiveLocale]);
+    window.localStorage.setItem("micro-tool-lab:locale", locale);
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   useEffect(() => {
     if (loading) return;
@@ -195,7 +190,7 @@ const App = () => {
       .filter((idea) => (ratingFilter === "all" ? true : idea.rating === ratingFilter))
       .filter((idea) => {
         if (!searchTerm) return true;
-        const display = getDisplayIdea(idea, effectiveLocale);
+        const display = getDisplayIdea(idea, locale);
         return (
           display.title.toLowerCase().includes(searchTerm) ||
           display.category.toLowerCase().includes(searchTerm) ||
@@ -207,7 +202,7 @@ const App = () => {
       .sort((left, right) => left.sortIndex - right.sortIndex || left.title.localeCompare(right.title));
     const seen = new Set<string>();
     return filtered.filter((idea) => {
-      const display = getDisplayIdea(idea, effectiveLocale);
+      const display = getDisplayIdea(idea, locale);
       const key = normalizeDisplayTitle(display.title);
       if (seen.has(key)) {
         return false;
@@ -215,19 +210,18 @@ const App = () => {
       seen.add(key);
       return true;
     });
-  }, [ideas, activeCategory, ratingFilter, search, effectiveLocale]);
+  }, [ideas, activeCategory, ratingFilter, search, locale]);
 
   const hiddenCount = ideas.filter((idea) => idea.rating === 1).length;
   const twoStarCount = ideas.filter((idea) => idea.rating === 2).length;
   const threeStarCount = ideas.filter((idea) => idea.rating === 3).length;
-  const activeCategoryLabel =
-    activeCategory === "All" ? ui.allCategories : translateCategory(activeCategory, effectiveLocale);
+  const activeCategoryLabel = activeCategory === "All" ? ui.allCategories : translateCategory(activeCategory, locale);
 
   const detailIdea = detailId ? ideas.find((idea) => idea.id === detailId) ?? null : null;
-  const detailView = detailIdea ? getDisplayIdea(detailIdea, effectiveLocale) : null;
+  const detailView = detailIdea ? getDisplayIdea(detailIdea, locale) : null;
 
   const currentRandomIdea = randomOpen ? ideas.find((idea) => idea.id === randomQueue[randomIndex]) ?? null : null;
-  const currentRandomView = currentRandomIdea ? getDisplayIdea(currentRandomIdea, effectiveLocale) : null;
+  const currentRandomView = currentRandomIdea ? getDisplayIdea(currentRandomIdea, locale) : null;
 
   useEffect(() => {
     if (!randomOpen) return;
@@ -380,7 +374,6 @@ const App = () => {
   };
 
   const setLanguage = (nextLocale: Locale) => {
-    if (HIDE_VI_TRANSLATIONS) return;
     setLocale(nextLocale);
   };
 
@@ -394,23 +387,21 @@ const App = () => {
           <div className="topbar-title-row">
             <span className="eyebrow">{ui.appName}</span>
             <div className="language-switcher" role="group" aria-label={ui.language}>
-              {HIDE_VI_TRANSLATIONS ? null : (
-                <button
-                  type="button"
-                  className={`language-flag ${locale === "vi" ? "active" : ""}`}
-                  onClick={() => setLanguage("vi")}
-                  aria-pressed={locale === "vi"}
-                  aria-label={ui.vietnamese}
-                  title={ui.vietnamese}
-                >
-                  <span aria-hidden="true">🇻🇳</span>
-                </button>
-              )}
               <button
                 type="button"
-                className={`language-flag ${effectiveLocale === "en" ? "active" : ""}`}
+                className={`language-flag ${locale === "vi" ? "active" : ""}`}
+                onClick={() => setLanguage("vi")}
+                aria-pressed={locale === "vi"}
+                aria-label={ui.vietnamese}
+                title={ui.vietnamese}
+              >
+                <span aria-hidden="true">🇻🇳</span>
+              </button>
+              <button
+                type="button"
+                className={`language-flag ${locale === "en" ? "active" : ""}`}
                 onClick={() => setLanguage("en")}
-                aria-pressed={effectiveLocale === "en"}
+                aria-pressed={locale === "en"}
                 aria-label={ui.english}
                 title={ui.english}
               >
@@ -496,7 +487,7 @@ const App = () => {
                         setCategoryMenuOpen(false);
                       }}
                     >
-                      {translateCategory(category, effectiveLocale)}
+                      {translateCategory(category, locale)}
                     </FilterChip>
                   ))}
             </div>
@@ -529,7 +520,7 @@ const App = () => {
                 onClick={() => toggleCategory(section.category)}
               >
                 <div className="section-title-row">
-                  <h2>{translateCategory(section.category, effectiveLocale)}</h2>
+                  <h2>{translateCategory(section.category, locale)}</h2>
                   <span className="section-count">
                     {section.ideas.length} {ui.ideasInView}
                   </span>
@@ -541,7 +532,7 @@ const App = () => {
                 <div className="cards">
                   {section.ideas.map((idea) => (
                     (() => {
-                      const display = getDisplayIdea(idea, effectiveLocale);
+                      const display = getDisplayIdea(idea, locale);
                       return (
                         <IdeaCard
                           key={idea.id}
@@ -658,11 +649,11 @@ const App = () => {
               >
                 {normalizeCategoryOrder([...categoryOrder, editorDraft.category]).map((category) => (
                   <option key={category} value={category}>
-                    {translateCategory(category, effectiveLocale)}
+                    {translateCategory(category, locale)}
                   </option>
                 ))}
                 {!categoryOrder.includes(editorDraft.category) ? (
-                  <option value={editorDraft.category}>{translateCategory(editorDraft.category, effectiveLocale)}</option>
+                  <option value={editorDraft.category}>{translateCategory(editorDraft.category, locale)}</option>
                 ) : null}
               </select>
             </Field>
