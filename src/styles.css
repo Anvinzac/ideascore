@@ -38,6 +38,7 @@ body {
     radial-gradient(circle at top right, rgba(99, 209, 255, 0.18), transparent 24%),
     linear-gradient(180deg, #09101d 0%, #050810 100%);
   font-family: "Manrope", system-ui, sans-serif;
+  overflow-x: hidden;
 }
 
 button,
@@ -131,7 +132,20 @@ textarea {
 .sheet-panel,
 .category-panel,
 .idea-card,
-.empty {
+.empty,
+.notice,
+.stat-pill {
+  min-width: 0;
+}
+
+.topbar *,
+.section *,
+.sheet-panel *,
+.category-panel *,
+.idea-card *,
+.empty *,
+.notice *,
+.stat-pill * {
   min-width: 0;
 }
 
@@ -245,8 +259,28 @@ textarea {
 .random-card p,
 .random-details,
 .note-preview,
-.notice span {
+.notice span,
+.section-badge,
+.idea-source,
+.meta-pill,
+.random-progress,
+.category-launcher strong,
+.category-panel-head span {
   color: var(--text-soft);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.topbar-copy h1 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.sheet-top h2,
+.section-head h2,
+.idea-card h3 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .stat-row,
@@ -585,8 +619,45 @@ textarea {
 }
 
 @media (max-width: 719px) {
+  .app-shell {
+    padding: 14px 12px calc(180px + env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .topbar-title-row {
+    gap: 8px;
+  }
+
+  .eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+  }
+
+  .language-switcher {
+    padding: 2px;
+    gap: 3px;
+  }
+
+  .language-flag {
+    width: 30px;
+    height: 30px;
+  }
+
+  .topbar-copy h1 {
+    font-size: clamp(0.98rem, 5.6vw, 1.5rem);
+  }
+
+  .topbar-copy p {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
   .category-launcher {
-    min-height: 52px;
+    min-height: 50px;
     padding: 0 12px;
   }
 
@@ -596,6 +667,155 @@ textarea {
 
   .category-panel {
     max-height: min(48dvh, 420px);
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .category-panel.open {
+    padding: 10px;
+  }
+
+  .category-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+    gap: 8px;
+  }
+
+  .category-panel-grid .filter-chip {
+    width: 100%;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-row > *,
+  .stat-pill {
+    width: 100%;
+  }
+
+  .toolbar {
+    display: grid;
+    gap: 12px;
+  }
+
+  .toolbar > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .section {
+    padding: 14px 12px;
+  }
+
+  .section-head {
+    gap: 10px;
+  }
+
+  .section-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .section-actions > * {
+    flex: 1 1 0;
+  }
+
+  .idea-heading {
+    flex-wrap: wrap;
+  }
+
+  .idea-heading > div {
+    width: 100%;
+  }
+
+  .card-footer {
+    flex-wrap: wrap;
+  }
+
+  .card-footer > * {
+    width: 100%;
+  }
+
+  .sheet-panel {
+    inset: 8px;
+    max-height: calc(100dvh - 16px);
+    border-radius: 24px;
+  }
+
+  .sheet-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
+    padding: 12px 12px 0;
+  }
+
+  .sheet-top > * {
+    width: auto;
+  }
+
+  .sheet-content {
+    padding: 14px 12px;
+  }
+
+  .sheet-footer {
+    padding: 0 12px 12px;
+  }
+
+  .sheet-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .sheet-actions > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .rating-inline {
+    display: grid;
+    gap: 8px;
+  }
+
+  .rating-inline {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .rating-inline.random-rating {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .rating-inline > * {
+    width: 100%;
+  }
+
+  .random-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+  }
+
+  .random-head > * {
+    width: auto;
+  }
+
+  .random-card .primary-button {
+    width: 100%;
+  }
+
+  .mini-button,
+  .rating-toggle,
+  .primary-button,
+  .ghost-button {
+    width: 100%;
   }
 }
 
