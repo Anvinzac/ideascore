@@ -518,19 +518,13 @@ const App = () => {
                 aria-expanded={!collapsedCategories[section.category]}
                 onClick={() => toggleCategory(section.category)}
               >
-                <div>
+                <div className="section-title-row">
                   <h2>{translateCategory(section.category, locale)}</h2>
-                  <p>
+                  <span className="section-count">
                     {section.ideas.length} {ui.ideasInView}
-                  </p>
-                </div>
-                <div className="section-actions">
-                  <span className="section-badge">
-                    {isSeedCategory(section.category) ? ui.imported : ui.custom}
                   </span>
-                  <span className="section-badge">{collapsedCategories[section.category] ? ui.show : ui.hide}</span>
-                  <ChevronDown size={16} className="section-chevron" />
                 </div>
+                <ChevronDown size={16} className="section-chevron" />
               </button>
 
               <div className={`section-body ${collapsedCategories[section.category] ? "collapsed" : "expanded"}`}>
@@ -594,9 +588,6 @@ const App = () => {
             <p className="detail-text">{detailView?.details ?? detailIdea.details}</p>
 
             <div className="meta-row">
-              <span className="meta-pill">
-                {ui.source}: {detailView?.sourceLabel ?? detailIdea.source}
-              </span>
               <span className="meta-pill">
                 {ui.category}: {detailView?.category ?? detailIdea.category}
               </span>

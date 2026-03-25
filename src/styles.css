@@ -565,10 +565,27 @@ textarea {
 
 .section-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
+}
+
+.section-title-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.section-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: var(--text-soft);
+  white-space: nowrap;
 }
 
 .section-toggle {
@@ -594,6 +611,7 @@ textarea {
 
 .section-head h2 {
   font-size: 1.25rem;
+  margin: 0;
 }
 
 .section-badge,
