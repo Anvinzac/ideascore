@@ -1,4 +1,5 @@
 import type { Idea } from "../types";
+import { composeEnglishCopy } from "./descriptionComposer";
 
 type SeedEntry = {
   name: string;
@@ -340,12 +341,13 @@ const groups: SeedGroup[] = [
 export const additionalSeedIdeas: Idea[] = groups.flatMap((group, categoryIndex) =>
   group.items.map((item, itemIndex) => {
     const createdAt = new Date(Date.UTC(2026, 2, 2, 0, categoryIndex, itemIndex)).toISOString();
+    const copy = composeEnglishCopy(group.category, item.name, item.description);
     return {
       id: `additional-${slugify(group.category)}-${slugify(item.name)}`,
       title: item.name,
       category: group.category,
-      summary: item.description,
-      details: item.description,
+      summary: copy.summary,
+      details: copy.details,
       rating: 0 as const,
       note: "",
       source: "seed" as const,

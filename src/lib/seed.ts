@@ -2,6 +2,7 @@ import type { Idea } from "../types";
 import { normalizeIdeaTitleKey, seedDescriptionOverrides } from "./descriptionOverrides";
 import { additionalSeedCategories, additionalSeedIdeas } from "./additionalSeedIdeas";
 import { moreSeedCategories, moreSeedIdeas } from "./additionalSeedIdeas2";
+import { composeEnglishCopy } from "./descriptionComposer";
 
 export const seedCategories = [
   {
@@ -263,26 +264,9 @@ const capitalizeFirstLetter = (value: string) => {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 };
 
-const makeSummary = (category: string, title: string) => {
-  const override = seedDescriptionOverrides.get(normalizeIdeaTitleKey(title));
-  if (override) {
-    return override;
-  }
-  const subject = title.replace(/\s*tool$/i, "").trim();
-  return `A focused ${category.toLowerCase()} micro-tool for ${subject.toLowerCase()}.`;
-};
-
-const makeDetails = (category: string, title: string) => {
-  const override = seedDescriptionOverrides.get(normalizeIdeaTitleKey(title));
-  if (override) {
-    return override;
-  }
-  const subject = title.replace(/\s*tool$/i, "").trim();
-  return [
-    `This idea sits in ${category} and is built around ${subject.toLowerCase()}.`,
-    "It works best when the workflow needs one short action, a simple status, and a clear handoff.",
-    "That makes it a good fit for a mobile-first tool review workflow.",
-  ].join(" ");
+const makeCopy = (category: string, title: string) => {
+  const baseDescription = seedDescriptionOverrides.get(normalizeIdeaTitleKey(title));
+  return composeEnglishCopy(category, title, baseDescription);
 };
 
 export const buildSeedIdeas = (): Idea[] =>
@@ -295,8 +279,7 @@ export const buildSeedIdeas = (): Idea[] =>
           id: `${slugify(group.category)}-${slugify(normalizedTitle)}`,
           title: normalizedTitle,
           category: group.category,
-          summary: makeSummary(group.category, normalizedTitle),
-          details: makeDetails(group.category, normalizedTitle),
+          ...makeCopy(group.category, normalizedTitle),
           rating: 0 as const,
           note: "",
           source: "seed" as const,
@@ -317,12 +300,13 @@ export const isSeedCategory = (value: string) =>
 
 export const createDefaultIdea = (category: string, title = "Untitled idea"): Idea => {
   const createdAt = new Date().toISOString();
+  const copy = makeCopy(category, title);
   return {
     id: `custom-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
     title,
     category,
-    summary: makeSummary(category, title),
-    details: makeDetails(category, title),
+    summary: copy.summary,
+    details: copy.details,
     rating: 0,
     note: "",
     source: "custom",

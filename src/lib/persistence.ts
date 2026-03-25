@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Idea } from "../types";
 import { buildSeedIdeas } from "./seed";
+import { shouldAutoUpgradeSeedText } from "./descriptionComposer";
 
 const STORAGE_KEY = "micro-tool-lab:ideas";
 const TABLE_NAME = "micro_tool_ideas";
@@ -93,10 +94,27 @@ const remoteReady = () => Boolean(supabase);
 
 export const loadIdeas = async (): Promise<Idea[]> => {
   const seedIdeas = buildSeedIdeas();
+  const seedById = new Map(seedIdeas.map((idea) => [idea.id, idea] as const));
+
+  const upgradeSeedText = (idea: Idea): Idea => {
+    if (idea.source !== "seed") return idea;
+    const canonical = seedById.get(idea.id);
+    if (!canonical) return idea;
+    if (!shouldAutoUpgradeSeedText(idea.summary, idea.details)) return idea;
+    return {
+      ...idea,
+      title: canonical.title,
+      category: canonical.category,
+      summary: canonical.summary,
+      details: canonical.details,
+      sortIndex: canonical.sortIndex,
+      updatedAt: new Date().toISOString(),
+    };
+  };
 
   if (!remoteReady()) {
     const cached = readCachedIdeas();
-    const merged = mergeIdeas(seedIdeas, cached);
+    const merged = mergeIdeas(seedIdeas, cached).map(upgradeSeedText);
     cacheIdeas(merged);
     return merged;
   }
@@ -125,6 +143,19 @@ export const loadIdeas = async (): Promise<Idea[]> => {
   if (changedRemoteIdeas.length > 0) {
     await client.from(TABLE_NAME).upsert(changedRemoteIdeas.map(fromIdea), { onConflict: "id" });
   }
+  const upgradedRemoteIdeas = normalizedRemoteIdeas.map(upgradeSeedText);
+  const changedDescriptionIdeas = upgradedRemoteIdeas.filter((idea, index) => {
+    const previous = normalizedRemoteIdeas[index];
+    return (
+      idea.summary !== previous?.summary ||
+      idea.details !== previous?.details ||
+      idea.category !== previous?.category ||
+      idea.sortIndex !== previous?.sortIndex
+    );
+  });
+  if (changedDescriptionIdeas.length > 0) {
+    await client.from(TABLE_NAME).upsert(changedDescriptionIdeas.map(fromIdea), { onConflict: "id" });
+  }
   const remoteIds = new Set(remoteIdeas.map((idea) => idea.id));
   const missingSeedIdeas = seedIdeas.filter((idea) => !remoteIds.has(idea.id));
 
@@ -133,13 +164,13 @@ export const loadIdeas = async (): Promise<Idea[]> => {
   }
 
   if (!data || data.length === 0) {
-    const merged = mergeIdeas(seedIdeas, readCachedIdeas());
+    const merged = mergeIdeas(seedIdeas, readCachedIdeas()).map(upgradeSeedText);
     cacheIdeas(merged);
     return merged;
   }
 
-  const merged = mergeIdeas(seedIdeas, normalizedRemoteIdeas);
-  const finalIdeas = mergeIdeas(merged, readCachedIdeas());
+  const merged = mergeIdeas(seedIdeas, upgradedRemoteIdeas).map(upgradeSeedText);
+  const finalIdeas = mergeIdeas(merged, readCachedIdeas()).map(upgradeSeedText);
   cacheIdeas(finalIdeas);
   return finalIdeas;
 };

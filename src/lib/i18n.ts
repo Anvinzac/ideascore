@@ -1,4 +1,5 @@
 import type { Idea } from "../types";
+import { composeVietnameseCopy, inferActionGroup, looksVietnamese } from "./descriptionComposer";
 
 export type Locale = "vi" | "en";
 
@@ -1097,8 +1098,15 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
   const isSeed = idea.source === "seed";
   const category = translateCategory(idea.category, locale);
   const title = isSeed ? translateSeedTitle(idea.title, locale) : idea.title;
-  const summary = idea.summary;
-  const details = idea.details;
+  let summary = idea.summary;
+  let details = idea.details;
+
+  if (isSeed && locale === "vi" && !looksVietnamese(summary) && !looksVietnamese(details)) {
+    const action = inferActionGroup(idea.title, idea.details || idea.summary);
+    const viCopy = composeVietnameseCopy(idea.category, title, action);
+    summary = viCopy.summary;
+    details = viCopy.details;
+  }
 
   return {
     title,
