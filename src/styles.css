@@ -30,6 +30,12 @@ body,
   min-height: 100%;
 }
 
+html,
+body,
+#root {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   color: var(--text);
@@ -39,6 +45,16 @@ body {
     linear-gradient(180deg, #09101d 0%, #050810 100%);
   font-family: "Manrope", system-ui, sans-serif;
   overflow-x: hidden;
+}
+
+:where(img, svg, video, canvas, iframe) {
+  max-inline-size: 100%;
+  height: auto;
+}
+
+:where(pre, code) {
+  max-inline-size: 100%;
+  overflow-x: auto;
 }
 
 button,
@@ -136,6 +152,38 @@ textarea {
 .notice,
 .stat-pill {
   min-width: 0;
+}
+
+.topbar,
+.section,
+.sheet-panel,
+.category-panel,
+.idea-card,
+.content,
+.toolbar,
+.chip-strip,
+.meta-row,
+.sheet-actions,
+.rating-inline,
+.random-head {
+  overflow-x: hidden;
+}
+
+@supports (overflow: clip) {
+  .topbar,
+  .section,
+  .sheet-panel,
+  .category-panel,
+  .idea-card,
+  .content,
+  .toolbar,
+  .chip-strip,
+  .meta-row,
+  .sheet-actions,
+  .rating-inline,
+  .random-head {
+    overflow-x: clip;
+  }
 }
 
 .topbar *,
@@ -619,6 +667,10 @@ textarea {
 }
 
 @media (max-width: 719px) {
+  * {
+    max-inline-size: 100%;
+  }
+
   .app-shell {
     padding: 14px 12px calc(180px + env(safe-area-inset-bottom));
   }
@@ -816,6 +868,23 @@ textarea {
   .primary-button,
   .ghost-button {
     width: 100%;
+  }
+
+  .chip-strip {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .chip-strip::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .chip-strip::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
   }
 }
 
