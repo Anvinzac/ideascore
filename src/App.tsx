@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowRight,
   BadgePlus,
@@ -33,6 +33,60 @@ type IdeaDraft = {
 };
 
 const normalizeDisplayTitle = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
+
+type CategoryTheme = { bg: string; border: string; text: string };
+
+const CATEGORY_THEMES: Record<string, CategoryTheme> = {
+  Education: { bg: "rgba(77, 143, 255, 0.16)", border: "rgba(77, 143, 255, 0.34)", text: "#e6efff" },
+  Healthcare: { bg: "rgba(71, 224, 162, 0.14)", border: "rgba(71, 224, 162, 0.32)", text: "#e9fff5" },
+  Restaurants: { bg: "rgba(245, 177, 76, 0.16)", border: "rgba(245, 177, 76, 0.34)", text: "#fff2dc" },
+  Retail: { bg: "rgba(255, 109, 127, 0.14)", border: "rgba(255, 109, 127, 0.32)", text: "#ffe7ea" },
+  Logistics: { bg: "rgba(99, 209, 255, 0.14)", border: "rgba(99, 209, 255, 0.32)", text: "#e7f8ff" },
+  "Real Estate": { bg: "rgba(34, 197, 184, 0.14)", border: "rgba(34, 197, 184, 0.32)", text: "#e6fffb" },
+  Manufacturing: { bg: "rgba(248, 113, 113, 0.14)", border: "rgba(248, 113, 113, 0.32)", text: "#ffe8e8" },
+  Construction: { bg: "rgba(234, 179, 8, 0.14)", border: "rgba(234, 179, 8, 0.32)", text: "#fff6d8" },
+  Nonprofits: { bg: "rgba(168, 85, 247, 0.14)", border: "rgba(168, 85, 247, 0.32)", text: "#f3e8ff" },
+  Finance: { bg: "rgba(16, 185, 129, 0.14)", border: "rgba(16, 185, 129, 0.32)", text: "#e7fff6" },
+  Marketing: { bg: "rgba(217, 70, 239, 0.14)", border: "rgba(217, 70, 239, 0.32)", text: "#fde7ff" },
+  "Fitness & Wellness": { bg: "rgba(163, 230, 53, 0.12)", border: "rgba(163, 230, 53, 0.3)", text: "#f4ffe3" },
+  "SaaS/Software Products": { bg: "rgba(99, 102, 241, 0.14)", border: "rgba(99, 102, 241, 0.32)", text: "#eaebff" },
+  "Travel & Hospitality": { bg: "rgba(20, 184, 166, 0.14)", border: "rgba(20, 184, 166, 0.32)", text: "#e5fffb" },
+  "Media & Content": { bg: "rgba(129, 140, 248, 0.14)", border: "rgba(129, 140, 248, 0.32)", text: "#eef0ff" },
+  "Fintech/Financial Services": { bg: "rgba(14, 165, 233, 0.14)", border: "rgba(14, 165, 233, 0.32)", text: "#e7f6ff" },
+  "Professional Services": { bg: "rgba(148, 163, 184, 0.14)", border: "rgba(148, 163, 184, 0.28)", text: "#f2f6ff" },
+  "Professional Services (Consulting, Legal, Accounting, etc.)": {
+    bg: "rgba(148, 163, 184, 0.14)",
+    border: "rgba(148, 163, 184, 0.28)",
+    text: "#f2f6ff",
+  },
+  Insurance: { bg: "rgba(59, 130, 246, 0.14)", border: "rgba(59, 130, 246, 0.32)", text: "#e7f0ff" },
+};
+
+const FALLBACK_THEMES: CategoryTheme[] = [
+  { bg: "rgba(99, 209, 255, 0.12)", border: "rgba(99, 209, 255, 0.28)", text: "#e7f8ff" },
+  { bg: "rgba(245, 177, 76, 0.12)", border: "rgba(245, 177, 76, 0.28)", text: "#fff2dc" },
+  { bg: "rgba(255, 109, 127, 0.12)", border: "rgba(255, 109, 127, 0.28)", text: "#ffe7ea" },
+  { bg: "rgba(71, 224, 162, 0.12)", border: "rgba(71, 224, 162, 0.28)", text: "#e9fff5" },
+  { bg: "rgba(168, 85, 247, 0.12)", border: "rgba(168, 85, 247, 0.28)", text: "#f3e8ff" },
+  { bg: "rgba(99, 102, 241, 0.12)", border: "rgba(99, 102, 241, 0.28)", text: "#eaebff" },
+];
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+};
+
+const categoryBadgeStyle = (category: string): CSSProperties => {
+  const theme = CATEGORY_THEMES[category] ?? FALLBACK_THEMES[hashString(category) % FALLBACK_THEMES.length];
+  return {
+    ["--cat-badge-bg" as any]: theme.bg,
+    ["--cat-badge-border" as any]: theme.border,
+    ["--cat-badge-text" as any]: theme.text,
+  };
+};
 
 const initialDraft = (category = categoryOrder[0] ?? "General"): IdeaDraft => ({
   title: "",
@@ -412,9 +466,6 @@ const App = () => {
           <div id="category-switcher-panel" className={`category-panel ${categoryMenuOpen ? "open" : ""}`}>
             <div className="category-panel-head">
               <span>{ui.category}</span>
-              <button type="button" className="mini-button" onClick={() => setCategoryMenuOpen(false)}>
-                {ui.close}
-              </button>
             </div>
             <div className="category-panel-grid">
               <FilterChip
@@ -686,7 +737,12 @@ const App = () => {
           {currentRandomIdea && currentRandomView ? (
             <div className="random-card">
               <div className="random-head">
-                <span className="section-badge">{currentRandomView.category}</span>
+                <span
+                  className="section-badge category-badge"
+                  style={categoryBadgeStyle(currentRandomIdea.category)}
+                >
+                  {currentRandomView.category}
+                </span>
                 <span className="random-progress">{randomIndex + 1} of {randomQueue.length}</span>
               </div>
               <h3>{currentRandomView.title}</h3>
@@ -748,12 +804,13 @@ function IdeaCard({
   return (
     <article className="idea-card">
       <button type="button" className="idea-main" onClick={onOpen}>
-        <div className="idea-heading">
+          <div className="idea-heading">
           <div>
-            <span className="section-badge">{display.category}</span>
+            <span className="section-badge category-badge" style={categoryBadgeStyle(idea.category)}>
+              {display.category}
+            </span>
             <h3>{display.title}</h3>
           </div>
-          <span className="idea-source">{display.sourceLabel}</span>
         </div>
 
         <p>{display.summary}</p>

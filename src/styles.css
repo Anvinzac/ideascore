@@ -616,6 +616,12 @@ textarea {
   text-overflow: ellipsis;
 }
 
+.category-badge {
+  background: var(--cat-badge-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--cat-badge-border, rgba(255, 255, 255, 0.08));
+  color: var(--cat-badge-text, var(--text));
+}
+
 .cards {
   display: grid;
   gap: 12px;

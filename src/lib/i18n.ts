@@ -16,7 +16,7 @@ export const uiCopy = {
     randomOne: "Ngẫu nhiên 1 ý tưởng",
     addIdea: "Thêm ý tưởng",
     allCategories: "Tất cả",
-    allRatings: "Tất cả mức sao",
+    allRatings: "Tất cả",
     twoStarOnly: "Chỉ 2 sao",
     threeStarOnly: "Chỉ 3 sao",
     ideasInView: "ý tưởng đang hiển thị",
@@ -65,9 +65,9 @@ export const uiCopy = {
     noMatch: "Không có ý tưởng nào khớp với bộ lọc hiện tại.",
     mobileBlurb:
       "Giao diện di động với danh mục có thể thu gọn, chấm điểm bằng sao, ghi chú và nút xem ngẫu nhiên từng ý tưởng một.",
-    defaultDraftSummary: "Một ý tưởng gọn nhẹ, phù hợp cho quy trình di động.",
+    defaultDraftSummary: "Tóm tắt nhanh.",
     defaultDraftDetails:
-      "Ý tưởng này phù hợp khi bạn cần một thao tác ngắn, trạng thái rõ ràng và luồng làm việc gọn gàng trên điện thoại.",
+      "Mô tả chi tiết: ai dùng, khi nào dùng, dữ liệu vào/ra, trạng thái, và bước tiếp theo.",
     importedLabel: "Đã nhập",
     customLabel: "Tự tạo",
   },
@@ -149,7 +149,11 @@ export const categoryLabels: Record<string, Record<Locale, string>> = {
   Logistics: { vi: "Logistics", en: "Logistics" },
   "Real Estate": { vi: "Bất động sản", en: "Real Estate" },
   Manufacturing: { vi: "Sản xuất", en: "Manufacturing" },
-  "Professional Services": { vi: "Dịch vụ chuyên nghiệp", en: "Professional Services" },
+  "Professional Services": { vi: "Dịch vụ", en: "Professional Services" },
+  "Professional Services (Consulting, Legal, Accounting, etc.)": {
+    vi: "Dịch vụ",
+    en: "Professional Services (Consulting, Legal, Accounting, etc.)",
+  },
   Construction: { vi: "Xây dựng", en: "Construction" },
   Nonprofits: { vi: "Phi lợi nhuận", en: "Nonprofits" },
   Finance: { vi: "Tài chính", en: "Finance" },
@@ -1093,22 +1097,8 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
   const isSeed = idea.source === "seed";
   const category = translateCategory(idea.category, locale);
   const title = isSeed ? translateSeedTitle(idea.title, locale) : idea.title;
-  const summary =
-    isSeed && locale === "vi"
-      ? `Ý tưởng này thuộc nhóm ${category.toLowerCase()} và xoay quanh ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`
-      : isSeed && locale === "en"
-        ? idea.summary
-        : idea.summary;
-  const details =
-    isSeed && locale === "vi"
-      ? [
-          `Ý tưởng này thuộc nhóm ${category.toLowerCase()} và xoay quanh ${stripTrailingToolSuffix(title, locale).toLowerCase()}.`,
-          "Nó phù hợp khi quy trình cần một thao tác ngắn, trạng thái rõ ràng và bàn giao gọn trên di động.",
-          "Điều đó khiến nó rất hợp với luồng rà soát ý tưởng nhanh của ứng dụng này.",
-        ].join(" ")
-      : isSeed && locale === "en"
-        ? idea.details
-        : idea.details;
+  const summary = idea.summary;
+  const details = idea.details;
 
   return {
     title,
@@ -1123,17 +1113,14 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
 
 export const getDraftSummary = (locale: Locale, category: string, title: string) => {
   if (locale === "vi") {
-    return `Một ý tưởng gọn nhẹ cho ${translateCategory(category, locale).toLowerCase()} xoay quanh ${title.trim().toLowerCase()}.`;
+    return `Tóm tắt nhanh cho "${title.trim()}".`;
   }
   return `A compact micro-tool idea for ${category.toLowerCase()} focused on ${title.trim().toLowerCase()}.`;
 };
 
 export const getDraftDetails = (locale: Locale, category: string, title: string) => {
   if (locale === "vi") {
-    return [
-      `Ý tưởng này phù hợp cho danh mục ${translateCategory(category, locale).toLowerCase()} và tập trung vào ${title.trim().toLowerCase()}.`,
-      "Nó hiệu quả nhất khi người dùng chỉ cần một thao tác ngắn, một trạng thái rõ ràng và bàn giao nhanh trên di động.",
-    ].join(" ");
+    return `Mô tả chi tiết cho "${title.trim()}": ai dùng, khi nào dùng, dữ liệu vào/ra, trạng thái, và bước tiếp theo.`;
   }
   return [
     `This idea works best in ${category.toLowerCase()} when the workflow centers on ${title.trim().toLowerCase()}.`,
@@ -1141,9 +1128,4 @@ export const getDraftDetails = (locale: Locale, category: string, title: string)
   ].join(" ");
 };
 
-const stripTrailingToolSuffix = (value: string, locale: Locale) => {
-  if (locale === "vi") {
-    return value.replace(/^(Công cụ|Nhật ký|Bảng điều khiển|Tóm tắt)\s+/i, "").trim();
-  }
-  return value.replace(/\s*tool$/i, "").trim();
-};
+// Intentionally no extra seed-only Vietnamese boilerplate; show the actual idea text instead.
