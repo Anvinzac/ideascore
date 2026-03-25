@@ -1,4 +1,5 @@
 import type { Idea } from "../types";
+import { normalizeIdeaTitleKey, seedDescriptionOverrides } from "./descriptionOverrides";
 
 export const seedCategories = [
   {
@@ -253,11 +254,19 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, "");
 
 const makeSummary = (category: string, title: string) => {
+  const override = seedDescriptionOverrides.get(normalizeIdeaTitleKey(title));
+  if (override) {
+    return override;
+  }
   const subject = title.replace(/\s*tool$/i, "").trim();
   return `A focused ${category.toLowerCase()} micro-tool for ${subject.toLowerCase()}.`;
 };
 
 const makeDetails = (category: string, title: string) => {
+  const override = seedDescriptionOverrides.get(normalizeIdeaTitleKey(title));
+  if (override) {
+    return override;
+  }
   const subject = title.replace(/\s*tool$/i, "").trim();
   return [
     `This idea sits in ${category} and is built around ${subject.toLowerCase()}.`,
