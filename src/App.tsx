@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   ArrowRight,
@@ -54,6 +54,7 @@ const App = () => {
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
   const [search, setSearch] = useState("");
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [editorDraft, setEditorDraft] = useState<IdeaDraft | null>(null);
   const [randomOpen, setRandomOpen] = useState(false);
@@ -61,6 +62,7 @@ const App = () => {
   const [randomIndex, setRandomIndex] = useState(0);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [syncError, setSyncError] = useState<string | null>(null);
+  const categoryMenuRef = useRef<HTMLDivElement | null>(null);
   const ui = getUiCopy(locale);
 
   useEffect(() => {
@@ -93,6 +95,32 @@ const App = () => {
     if (loading) return;
     window.localStorage.setItem("micro-tool-lab:last-state", JSON.stringify(ideas));
   }, [ideas, loading]);
+
+  useEffect(() => {
+    if (!categoryMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (categoryMenuRef.current?.contains(target)) return;
+      setCategoryMenuOpen(false);
+    };
+
+    const autoHideTimer = window.setTimeout(() => setCategoryMenuOpen(false), 4500);
+    const handleScroll = () => setCategoryMenuOpen(false);
+    const handleResize = () => setCategoryMenuOpen(false);
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.clearTimeout(autoHideTimer);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [categoryMenuOpen]);
 
   const categories = useMemo(
     () => normalizeCategoryOrder(Array.from(new Set(ideas.map((idea) => idea.category)))),
@@ -132,6 +160,7 @@ const App = () => {
   const hiddenCount = ideas.filter((idea) => idea.rating === 1).length;
   const twoStarCount = ideas.filter((idea) => idea.rating === 2).length;
   const threeStarCount = ideas.filter((idea) => idea.rating === 3).length;
+  const activeCategoryLabel = activeCategory === "All" ? ui.allCategories : translateCategory(activeCategory, locale);
 
   const detailIdea = detailId ? ideas.find((idea) => idea.id === detailId) ?? null : null;
   const detailView = detailIdea ? getDisplayIdea(detailIdea, locale) : null;
@@ -361,15 +390,50 @@ const App = () => {
           </button>
         </div>
 
-        <div className="chip-strip">
-          <FilterChip active={activeCategory === "All"} onClick={() => setActiveCategory("All")}>
-            {ui.allCategories}
-          </FilterChip>
-          {categories.map((category) => (
-            <FilterChip key={category} active={activeCategory === category} onClick={() => setActiveCategory(category)}>
-              {translateCategory(category, locale)}
-            </FilterChip>
-          ))}
+        <div className="category-dock" ref={categoryMenuRef}>
+          <button
+            type="button"
+            className={`category-launcher ${categoryMenuOpen ? "open" : ""}`}
+            onClick={() => setCategoryMenuOpen((open) => !open)}
+            aria-expanded={categoryMenuOpen}
+            aria-controls="category-switcher-panel"
+          >
+            <span className="category-launcher-label">{ui.category}</span>
+            <strong>{activeCategoryLabel}</strong>
+            <ChevronDown size={16} className="category-launcher-chevron" />
+          </button>
+
+          <div id="category-switcher-panel" className={`category-panel ${categoryMenuOpen ? "open" : ""}`}>
+            <div className="category-panel-head">
+              <span>{ui.category}</span>
+              <button type="button" className="mini-button" onClick={() => setCategoryMenuOpen(false)}>
+                {ui.close}
+              </button>
+            </div>
+            <div className="category-panel-grid">
+              <FilterChip
+                active={activeCategory === "All"}
+                onClick={() => {
+                  setActiveCategory("All");
+                  setCategoryMenuOpen(false);
+                }}
+              >
+                {ui.allCategories}
+              </FilterChip>
+              {categories.map((category) => (
+                <FilterChip
+                  key={category}
+                  active={activeCategory === category}
+                  onClick={() => {
+                    setActiveCategory(category);
+                    setCategoryMenuOpen(false);
+                  }}
+                >
+                  {translateCategory(category, locale)}
+                </FilterChip>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="chip-strip">
