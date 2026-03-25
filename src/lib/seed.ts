@@ -1,6 +1,7 @@
 import type { Idea } from "../types";
 import { normalizeIdeaTitleKey, seedDescriptionOverrides } from "./descriptionOverrides";
 import { additionalSeedCategories, additionalSeedIdeas } from "./additionalSeedIdeas";
+import { moreSeedCategories, moreSeedIdeas } from "./additionalSeedIdeas2";
 
 export const seedCategories = [
   {
@@ -245,7 +246,9 @@ export const seedCategories = [
   },
 ] as const;
 
-export const categoryOrder = [...seedCategories.map((entry) => entry.category), ...additionalSeedCategories];
+export const categoryOrder = Array.from(
+  new Set([...seedCategories.map((entry) => entry.category), ...additionalSeedCategories, ...moreSeedCategories]),
+);
 
 const slugify = (value: string) =>
   value
@@ -297,10 +300,13 @@ export const buildSeedIdeas = (): Idea[] =>
       }),
     ),
     ...additionalSeedIdeas,
+    ...moreSeedIdeas,
   ];
 
 export const isSeedCategory = (value: string) =>
-  seedCategories.some((entry) => entry.category === value) || additionalSeedCategories.includes(value);
+  seedCategories.some((entry) => entry.category === value) ||
+  additionalSeedCategories.includes(value) ||
+  moreSeedCategories.includes(value);
 
 export const createDefaultIdea = (category: string, title = "Untitled idea"): Idea => {
   const createdAt = new Date().toISOString();
