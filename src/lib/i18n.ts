@@ -727,6 +727,96 @@ export const translateCategory = (category: string, locale: Locale) =>
 
 const cleanSeedTitle = (value: string) => value.replace(/\[cite:\s*\d+\]/g, "").trim();
 
+const viPhraseReplacements: Array<[RegExp, string]> = [
+  [/\bclient workout plan\b/g, "kế hoạch tập luyện khách hàng"],
+  [/\bsession attendance\b/g, "điểm danh buổi tập"],
+  [/\bfitness goal progress\b/g, "tiến độ mục tiêu thể hình"],
+  [/\bexercise library\b/g, "thư viện bài tập"],
+  [/\bnutrition habit\b/g, "thói quen dinh dưỡng"],
+  [/\bbody[- ]?metric\b/g, "chỉ số cơ thể"],
+  [/\btrainer schedule conflict\b/g, "xung đột lịch huấn luyện viên"],
+  [/\bgroup challenge progress\b/g, "tiến độ thử thách nhóm"],
+  [/\bfeature request\b/g, "yêu cầu tính năng"],
+  [/\bbug priority\b/g, "mức độ ưu tiên lỗi"],
+  [/\brelease note version\b/g, "phiên bản ghi chú phát hành"],
+  [/\buser onboarding\b/g, "nhập môn người dùng"],
+  [/\btrial-to-paid conversion\b/g, "chuyển đổi dùng thử sang trả phí"],
+  [/\bapi usage quota\b/g, "hạn mức sử dụng API"],
+  [/\bfeature adoption heatmap\b/g, "bản đồ nhiệt mức độ dùng tính năng"],
+  [/\bguest reservation status\b/g, "trạng thái đặt phòng"],
+  [/\broom cleaning status\b/g, "trạng thái dọn phòng"],
+  [/\bcheck-in document\b/g, "giấy tờ nhận phòng"],
+  [/\bupsell opportunity\b/g, "cơ hội bán thêm"],
+  [/\bguest preference\b/g, "sở thích khách"],
+  [/\bhousekeeping task\b/g, "nhiệm vụ dọn phòng"],
+  [/\bguest incident\b/g, "sự cố khách"],
+  [/\barticle draft status\b/g, "trạng thái bản nháp bài viết"],
+  [/\bcontent calendar task\b/g, "lịch nội dung"],
+  [/\bwriter assignment\b/g, "phân công người viết"],
+  [/\bimage rights\b/g, "quyền ảnh"],
+  [/\bpublishing approval\b/g, "phê duyệt xuất bản"],
+  [/\bcopyright expiration\b/g, "hết hạn bản quyền"],
+  [/\banalytics metric snapshot\b/g, "ảnh chụp chỉ số"],
+  [/\bcontent localization\b/g, "bản địa hóa nội dung"],
+  [/\bloan application status\b/g, "trạng thái hồ sơ vay"],
+  [/\bcredit score snapshot\b/g, "ảnh chụp điểm tín dụng"],
+  [/\btransaction category\b/g, "danh mục giao dịch"],
+  [/\bcompliance requirement\b/g, "yêu cầu tuân thủ"],
+  [/\border tracking\b/g, "theo dõi đơn hàng"],
+  [/\btable assignment\b/g, "phân bàn"],
+  [/\bstaff scheduling\b/g, "xếp ca nhân viên"],
+  [/\bdaily sales summary\b/g, "tóm tắt doanh thu ngày"],
+  [/\bcustomer feedback collection\b/g, "thu thập phản hồi khách hàng"],
+  [/\breservation waitlist\b/g, "danh sách chờ đặt bàn"],
+  [/\bspecial-diet request\b/g, "yêu cầu chế độ ăn"],
+  [/\bstaff shift checklist\b/g, "checklist ca làm"],
+  [/\bvendor delivery log\b/g, "nhật ký giao hàng nhà cung cấp"],
+  [/\bstore inventory count\b/g, "kiểm kê cửa hàng"],
+  [/\bprice tag change\b/g, "thay đổi nhãn giá"],
+  [/\breturn reason tagging\b/g, "gắn nhãn lý do trả hàng"],
+  [/\bcustomer loyalty tier\b/g, "hạng khách thân thiết"],
+  [/\bpromotion performance\b/g, "hiệu quả khuyến mãi"],
+  [/\bshelf placement planner\b/g, "kế hoạch trưng bày kệ"],
+  [/\bshipment tracking status\b/g, "trạng thái lô hàng"],
+  [/\bdelivery route planner\b/g, "lập tuyến giao hàng"],
+  [/\bdriver duty log\b/g, "nhật ký ca lái xe"],
+  [/\bwarehouse zone assignment\b/g, "phân khu kho"],
+  [/\bfreight cost estimation\b/g, "ước tính cước vận chuyển"],
+  [/\bcustoms clearance status\b/g, "trạng thái thông quan"],
+  [/\bproperty listing status\b/g, "trạng thái tin đăng"],
+  [/\blead follow-up reminder\b/g, "nhắc theo dõi khách tiềm năng"],
+  [/\bcommission split calculator\b/g, "tính chia hoa hồng"],
+  [/\bproperty inspection checklist\b/g, "checklist kiểm tra bất động sản"],
+  [/\bshowing schedule planner\b/g, "lịch xem nhà"],
+  [/\bmachine uptime logging\b/g, "ghi thời gian máy chạy"],
+  [/\bdefect type tagging\b/g, "gắn nhãn loại lỗi"],
+  [/\bwork order progress\b/g, "tiến độ lệnh sản xuất"],
+  [/\braw material consumption\b/g, "tiêu hao nguyên liệu"],
+  [/\bquality control checklist\b/g, "checklist kiểm tra chất lượng"],
+  [/\bsafety incident log\b/g, "nhật ký sự cố an toàn"],
+  [/\bproduction batch tracking\b/g, "theo dõi lô sản xuất"],
+  [/\bclient contact log\b/g, "nhật ký liên hệ khách hàng"],
+  [/\bdocument version comparison\b/g, "so sánh phiên bản tài liệu"],
+  [/\bconflict of interest checker\b/g, "kiểm tra xung đột lợi ích"],
+  [/\bmatter status dashboard\b/g, "bảng điều khiển trạng thái hồ sơ"],
+  [/\btask delegation\b/g, "phân công nhiệm vụ"],
+  [/\bmeeting agenda library\b/g, "thư viện chương trình họp"],
+  [/\bblueprint version\b/g, "phiên bản bản vẽ"],
+  [/\bdaily site report\b/g, "báo cáo công trường ngày"],
+  [/\bwork-in-progress photography\b/g, "ảnh tiến độ"],
+  [/\bpunch list\b/g, "danh sách sửa lỗi"],
+  [/\bdonor contact history\b/g, "lịch sử liên hệ nhà tài trợ"],
+  [/\bgrant application status\b/g, "trạng thái hồ sơ tài trợ"],
+  [/\bvolunteer shift log\b/g, "nhật ký ca tình nguyện"],
+  [/\bcampaign impact tagging\b/g, "gắn nhãn tác động chiến dịch"],
+  [/\bevent attendance\b/g, "điểm danh sự kiện"],
+  [/\bprogram outcome metric\b/g, "chỉ số kết quả chương trình"],
+  [/\bin-kind donation\b/g, "quyên góp hiện vật"],
+  [/\bbeneficiary intake form\b/g, "biểu mẫu tiếp nhận người thụ hưởng"],
+  [/\breporting deadline reminder\b/g, "nhắc thời hạn báo cáo"],
+  [/\bcommunity feedback\b/g, "phản hồi cộng đồng"],
+];
+
 const viTitleReplacements: Array<[RegExp, string]> = [
   [/\bclient\b/g, "khách hàng"],
   [/\bcustomer\b/g, "khách hàng"],
@@ -934,6 +1024,9 @@ const viTitleReplacements: Array<[RegExp, string]> = [
 const translateGeneratedSeedTitleVi = (title: string) => {
   const cleaned = cleanSeedTitle(title).replace(/\s*tool$/i, "").replace(/\s*tracker$/i, "").trim();
   let value = cleaned.toLowerCase();
+  for (const [pattern, replacement] of viPhraseReplacements) {
+    value = value.replace(pattern, replacement);
+  }
   for (const [pattern, replacement] of viTitleReplacements) {
     value = value.replace(pattern, replacement);
   }
@@ -951,24 +1044,34 @@ const translateGeneratedSeedTitleVi = (title: string) => {
     : /summary$/.test(cleaned)
       ? "Tóm tắt"
       : /planner$/.test(cleaned) || /scheduler$/.test(cleaned) || /schedule$/.test(cleaned)
-        ? "Công cụ lập kế hoạch"
+        ? "Lập lịch"
         : /checker$/.test(cleaned)
-          ? "Công cụ kiểm tra"
+          ? "Kiểm tra"
           : /calculator$/.test(cleaned)
-            ? "Công cụ tính toán"
+            ? "Tính toán"
             : /log$/.test(cleaned) || /logging tool$/.test(cleaned)
               ? "Nhật ký"
-              : /tracking tool$/.test(cleaned) || /tracker$/.test(cleaned)
-                ? "Công cụ theo dõi"
+              : /tracking tool$/.test(cleaned) || /tracker$/.test(cleaned) || /status tracker$/.test(cleaned)
+                ? "Theo dõi"
                 : /tagging tool$/.test(cleaned)
-                  ? "Công cụ gắn nhãn"
+                  ? "Gắn nhãn"
                   : /comparison tool$/.test(cleaned)
-                    ? "Công cụ so sánh"
-                    : /status tool$/.test(cleaned) || /status tracker$/.test(cleaned)
-                      ? "Công cụ trạng thái"
-                      : "Công cụ";
+                    ? "So sánh"
+                      : /status tool$/.test(cleaned)
+                        ? "Trạng thái"
+                        : /helper$/.test(cleaned)
+                          ? "Trợ lý"
+                          : "";
 
-  return `${suffixPrefix} ${value}`.replace(/\s+/g, " ").trim();
+  const alreadyNatural = /^(trạng thái|theo dõi|bảng điều khiển|tóm tắt|lập lịch|kiểm tra|tính toán|nhật ký|gắn nhãn|so sánh|trợ lý|phân|xếp|báo cáo|điểm danh|nhắc|quyền|thư viện|danh sách|ảnh|phê duyệt|phân khu|lập tuyến|ghi|tiến độ|cải tạo|hành động|phản hồi)/.test(
+    value,
+  );
+
+  if (alreadyNatural) {
+    return value;
+  }
+
+  return suffixPrefix ? `${suffixPrefix} ${value}`.replace(/\s+/g, " ").trim() : value;
 };
 
 export const translateSeedTitle = (title: string, locale: Locale) => {
