@@ -638,6 +638,7 @@ textarea {
   background: var(--cat-badge-bg, rgba(255, 255, 255, 0.06));
   border: 1px solid var(--cat-badge-border, rgba(255, 255, 255, 0.08));
   color: var(--cat-badge-text, var(--text));
+  box-shadow: 0 12px 26px var(--cat-badge-glow, rgba(0, 0, 0, 0));
 }
 
 .cards {
@@ -911,23 +912,38 @@ textarea {
 }
 
 .idea-card {
+  position: relative;
   overflow: hidden;
   display: grid;
   gap: 12px;
   padding: 14px;
   border-radius: 22px;
   background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--cat-card-border, rgba(255, 255, 255, 0.06));
   box-shadow: var(--shadow);
 }
 
+.idea-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cat-card-bg, transparent);
+  pointer-events: none;
+}
+
 .idea-main {
+  position: relative;
   display: grid;
   gap: 10px;
   text-align: left;
   padding: 0;
   background: transparent;
   color: inherit;
+}
+
+.card-footer {
+  position: relative;
 }
 
 .idea-heading {

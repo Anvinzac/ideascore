@@ -34,41 +34,219 @@ type IdeaDraft = {
 
 const normalizeDisplayTitle = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
 
-type CategoryTheme = { bg: string; border: string; text: string };
+type CategoryTheme = {
+  cardBg: string;
+  cardBorder: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeGlow: string;
+  badgeText: string;
+};
 
 const CATEGORY_THEMES: Record<string, CategoryTheme> = {
-  Education: { bg: "rgba(77, 143, 255, 0.16)", border: "rgba(77, 143, 255, 0.34)", text: "#e6efff" },
-  Healthcare: { bg: "rgba(71, 224, 162, 0.14)", border: "rgba(71, 224, 162, 0.32)", text: "#e9fff5" },
-  Restaurants: { bg: "rgba(245, 177, 76, 0.16)", border: "rgba(245, 177, 76, 0.34)", text: "#fff2dc" },
-  Retail: { bg: "rgba(255, 109, 127, 0.14)", border: "rgba(255, 109, 127, 0.32)", text: "#ffe7ea" },
-  Logistics: { bg: "rgba(99, 209, 255, 0.14)", border: "rgba(99, 209, 255, 0.32)", text: "#e7f8ff" },
-  "Real Estate": { bg: "rgba(34, 197, 184, 0.14)", border: "rgba(34, 197, 184, 0.32)", text: "#e6fffb" },
-  Manufacturing: { bg: "rgba(248, 113, 113, 0.14)", border: "rgba(248, 113, 113, 0.32)", text: "#ffe8e8" },
-  Construction: { bg: "rgba(234, 179, 8, 0.14)", border: "rgba(234, 179, 8, 0.32)", text: "#fff6d8" },
-  Nonprofits: { bg: "rgba(168, 85, 247, 0.14)", border: "rgba(168, 85, 247, 0.32)", text: "#f3e8ff" },
-  Finance: { bg: "rgba(16, 185, 129, 0.14)", border: "rgba(16, 185, 129, 0.32)", text: "#e7fff6" },
-  Marketing: { bg: "rgba(217, 70, 239, 0.14)", border: "rgba(217, 70, 239, 0.32)", text: "#fde7ff" },
-  "Fitness & Wellness": { bg: "rgba(163, 230, 53, 0.12)", border: "rgba(163, 230, 53, 0.3)", text: "#f4ffe3" },
-  "SaaS/Software Products": { bg: "rgba(99, 102, 241, 0.14)", border: "rgba(99, 102, 241, 0.32)", text: "#eaebff" },
-  "Travel & Hospitality": { bg: "rgba(20, 184, 166, 0.14)", border: "rgba(20, 184, 166, 0.32)", text: "#e5fffb" },
-  "Media & Content": { bg: "rgba(129, 140, 248, 0.14)", border: "rgba(129, 140, 248, 0.32)", text: "#eef0ff" },
-  "Fintech/Financial Services": { bg: "rgba(14, 165, 233, 0.14)", border: "rgba(14, 165, 233, 0.32)", text: "#e7f6ff" },
-  "Professional Services": { bg: "rgba(148, 163, 184, 0.14)", border: "rgba(148, 163, 184, 0.28)", text: "#f2f6ff" },
-  "Professional Services (Consulting, Legal, Accounting, etc.)": {
-    bg: "rgba(148, 163, 184, 0.14)",
-    border: "rgba(148, 163, 184, 0.28)",
-    text: "#f2f6ff",
+  Education: {
+    cardBg: "rgba(77, 143, 255, 0.1)",
+    cardBorder: "rgba(77, 143, 255, 0.22)",
+    badgeBg: "rgba(77, 143, 255, 0.3)",
+    badgeBorder: "rgba(77, 143, 255, 0.62)",
+    badgeGlow: "rgba(77, 143, 255, 0.22)",
+    badgeText: "#f2f7ff",
   },
-  Insurance: { bg: "rgba(59, 130, 246, 0.14)", border: "rgba(59, 130, 246, 0.32)", text: "#e7f0ff" },
+  Healthcare: {
+    cardBg: "rgba(71, 224, 162, 0.1)",
+    cardBorder: "rgba(71, 224, 162, 0.22)",
+    badgeBg: "rgba(71, 224, 162, 0.28)",
+    badgeBorder: "rgba(71, 224, 162, 0.6)",
+    badgeGlow: "rgba(71, 224, 162, 0.2)",
+    badgeText: "#effff7",
+  },
+  Restaurants: {
+    cardBg: "rgba(245, 177, 76, 0.1)",
+    cardBorder: "rgba(245, 177, 76, 0.22)",
+    badgeBg: "rgba(245, 177, 76, 0.28)",
+    badgeBorder: "rgba(245, 177, 76, 0.58)",
+    badgeGlow: "rgba(245, 177, 76, 0.2)",
+    badgeText: "#fff6e7",
+  },
+  Retail: {
+    cardBg: "rgba(255, 109, 127, 0.1)",
+    cardBorder: "rgba(255, 109, 127, 0.22)",
+    badgeBg: "rgba(255, 109, 127, 0.28)",
+    badgeBorder: "rgba(255, 109, 127, 0.58)",
+    badgeGlow: "rgba(255, 109, 127, 0.2)",
+    badgeText: "#fff0f2",
+  },
+  Logistics: {
+    cardBg: "rgba(99, 209, 255, 0.1)",
+    cardBorder: "rgba(99, 209, 255, 0.22)",
+    badgeBg: "rgba(99, 209, 255, 0.28)",
+    badgeBorder: "rgba(99, 209, 255, 0.58)",
+    badgeGlow: "rgba(99, 209, 255, 0.2)",
+    badgeText: "#eefbff",
+  },
+  "Real Estate": {
+    cardBg: "rgba(34, 197, 184, 0.1)",
+    cardBorder: "rgba(34, 197, 184, 0.22)",
+    badgeBg: "rgba(34, 197, 184, 0.28)",
+    badgeBorder: "rgba(34, 197, 184, 0.6)",
+    badgeGlow: "rgba(34, 197, 184, 0.2)",
+    badgeText: "#eafffd",
+  },
+  Manufacturing: {
+    cardBg: "rgba(248, 113, 113, 0.1)",
+    cardBorder: "rgba(248, 113, 113, 0.22)",
+    badgeBg: "rgba(248, 113, 113, 0.28)",
+    badgeBorder: "rgba(248, 113, 113, 0.58)",
+    badgeGlow: "rgba(248, 113, 113, 0.2)",
+    badgeText: "#fff0f0",
+  },
+  Construction: {
+    cardBg: "rgba(234, 179, 8, 0.1)",
+    cardBorder: "rgba(234, 179, 8, 0.22)",
+    badgeBg: "rgba(234, 179, 8, 0.26)",
+    badgeBorder: "rgba(234, 179, 8, 0.56)",
+    badgeGlow: "rgba(234, 179, 8, 0.18)",
+    badgeText: "#fff8e4",
+  },
+  Nonprofits: {
+    cardBg: "rgba(168, 85, 247, 0.1)",
+    cardBorder: "rgba(168, 85, 247, 0.22)",
+    badgeBg: "rgba(168, 85, 247, 0.26)",
+    badgeBorder: "rgba(168, 85, 247, 0.56)",
+    badgeGlow: "rgba(168, 85, 247, 0.2)",
+    badgeText: "#f8f0ff",
+  },
+  Finance: {
+    cardBg: "rgba(16, 185, 129, 0.1)",
+    cardBorder: "rgba(16, 185, 129, 0.22)",
+    badgeBg: "rgba(16, 185, 129, 0.26)",
+    badgeBorder: "rgba(16, 185, 129, 0.56)",
+    badgeGlow: "rgba(16, 185, 129, 0.18)",
+    badgeText: "#eafff7",
+  },
+  Marketing: {
+    cardBg: "rgba(217, 70, 239, 0.1)",
+    cardBorder: "rgba(217, 70, 239, 0.22)",
+    badgeBg: "rgba(217, 70, 239, 0.26)",
+    badgeBorder: "rgba(217, 70, 239, 0.56)",
+    badgeGlow: "rgba(217, 70, 239, 0.18)",
+    badgeText: "#ffeefe",
+  },
+  "Fitness & Wellness": {
+    cardBg: "rgba(163, 230, 53, 0.09)",
+    cardBorder: "rgba(163, 230, 53, 0.2)",
+    badgeBg: "rgba(163, 230, 53, 0.22)",
+    badgeBorder: "rgba(163, 230, 53, 0.5)",
+    badgeGlow: "rgba(163, 230, 53, 0.16)",
+    badgeText: "#f6ffe6",
+  },
+  "SaaS/Software Products": {
+    cardBg: "rgba(99, 102, 241, 0.1)",
+    cardBorder: "rgba(99, 102, 241, 0.22)",
+    badgeBg: "rgba(99, 102, 241, 0.26)",
+    badgeBorder: "rgba(99, 102, 241, 0.56)",
+    badgeGlow: "rgba(99, 102, 241, 0.18)",
+    badgeText: "#f0f0ff",
+  },
+  "Travel & Hospitality": {
+    cardBg: "rgba(20, 184, 166, 0.1)",
+    cardBorder: "rgba(20, 184, 166, 0.22)",
+    badgeBg: "rgba(20, 184, 166, 0.26)",
+    badgeBorder: "rgba(20, 184, 166, 0.56)",
+    badgeGlow: "rgba(20, 184, 166, 0.18)",
+    badgeText: "#eafffb",
+  },
+  "Media & Content": {
+    cardBg: "rgba(129, 140, 248, 0.1)",
+    cardBorder: "rgba(129, 140, 248, 0.22)",
+    badgeBg: "rgba(129, 140, 248, 0.26)",
+    badgeBorder: "rgba(129, 140, 248, 0.56)",
+    badgeGlow: "rgba(129, 140, 248, 0.18)",
+    badgeText: "#f2f3ff",
+  },
+  "Fintech/Financial Services": {
+    cardBg: "rgba(14, 165, 233, 0.1)",
+    cardBorder: "rgba(14, 165, 233, 0.22)",
+    badgeBg: "rgba(14, 165, 233, 0.26)",
+    badgeBorder: "rgba(14, 165, 233, 0.56)",
+    badgeGlow: "rgba(14, 165, 233, 0.18)",
+    badgeText: "#eef9ff",
+  },
+  "Professional Services": {
+    cardBg: "rgba(148, 163, 184, 0.08)",
+    cardBorder: "rgba(148, 163, 184, 0.18)",
+    badgeBg: "rgba(148, 163, 184, 0.2)",
+    badgeBorder: "rgba(148, 163, 184, 0.42)",
+    badgeGlow: "rgba(148, 163, 184, 0.14)",
+    badgeText: "#f5f7ff",
+  },
+  "Professional Services (Consulting, Legal, Accounting, etc.)": {
+    cardBg: "rgba(148, 163, 184, 0.08)",
+    cardBorder: "rgba(148, 163, 184, 0.18)",
+    badgeBg: "rgba(148, 163, 184, 0.2)",
+    badgeBorder: "rgba(148, 163, 184, 0.42)",
+    badgeGlow: "rgba(148, 163, 184, 0.14)",
+    badgeText: "#f5f7ff",
+  },
+  Insurance: {
+    cardBg: "rgba(59, 130, 246, 0.1)",
+    cardBorder: "rgba(59, 130, 246, 0.22)",
+    badgeBg: "rgba(59, 130, 246, 0.28)",
+    badgeBorder: "rgba(59, 130, 246, 0.58)",
+    badgeGlow: "rgba(59, 130, 246, 0.2)",
+    badgeText: "#eef4ff",
+  },
 };
 
 const FALLBACK_THEMES: CategoryTheme[] = [
-  { bg: "rgba(99, 209, 255, 0.12)", border: "rgba(99, 209, 255, 0.28)", text: "#e7f8ff" },
-  { bg: "rgba(245, 177, 76, 0.12)", border: "rgba(245, 177, 76, 0.28)", text: "#fff2dc" },
-  { bg: "rgba(255, 109, 127, 0.12)", border: "rgba(255, 109, 127, 0.28)", text: "#ffe7ea" },
-  { bg: "rgba(71, 224, 162, 0.12)", border: "rgba(71, 224, 162, 0.28)", text: "#e9fff5" },
-  { bg: "rgba(168, 85, 247, 0.12)", border: "rgba(168, 85, 247, 0.28)", text: "#f3e8ff" },
-  { bg: "rgba(99, 102, 241, 0.12)", border: "rgba(99, 102, 241, 0.28)", text: "#eaebff" },
+  {
+    cardBg: "rgba(99, 209, 255, 0.09)",
+    cardBorder: "rgba(99, 209, 255, 0.2)",
+    badgeBg: "rgba(99, 209, 255, 0.24)",
+    badgeBorder: "rgba(99, 209, 255, 0.52)",
+    badgeGlow: "rgba(99, 209, 255, 0.18)",
+    badgeText: "#eefbff",
+  },
+  {
+    cardBg: "rgba(245, 177, 76, 0.09)",
+    cardBorder: "rgba(245, 177, 76, 0.2)",
+    badgeBg: "rgba(245, 177, 76, 0.24)",
+    badgeBorder: "rgba(245, 177, 76, 0.52)",
+    badgeGlow: "rgba(245, 177, 76, 0.18)",
+    badgeText: "#fff6e7",
+  },
+  {
+    cardBg: "rgba(255, 109, 127, 0.09)",
+    cardBorder: "rgba(255, 109, 127, 0.2)",
+    badgeBg: "rgba(255, 109, 127, 0.24)",
+    badgeBorder: "rgba(255, 109, 127, 0.52)",
+    badgeGlow: "rgba(255, 109, 127, 0.18)",
+    badgeText: "#fff0f2",
+  },
+  {
+    cardBg: "rgba(71, 224, 162, 0.09)",
+    cardBorder: "rgba(71, 224, 162, 0.2)",
+    badgeBg: "rgba(71, 224, 162, 0.24)",
+    badgeBorder: "rgba(71, 224, 162, 0.52)",
+    badgeGlow: "rgba(71, 224, 162, 0.18)",
+    badgeText: "#effff7",
+  },
+  {
+    cardBg: "rgba(168, 85, 247, 0.09)",
+    cardBorder: "rgba(168, 85, 247, 0.2)",
+    badgeBg: "rgba(168, 85, 247, 0.24)",
+    badgeBorder: "rgba(168, 85, 247, 0.52)",
+    badgeGlow: "rgba(168, 85, 247, 0.18)",
+    badgeText: "#f8f0ff",
+  },
+  {
+    cardBg: "rgba(99, 102, 241, 0.09)",
+    cardBorder: "rgba(99, 102, 241, 0.2)",
+    badgeBg: "rgba(99, 102, 241, 0.24)",
+    badgeBorder: "rgba(99, 102, 241, 0.52)",
+    badgeGlow: "rgba(99, 102, 241, 0.18)",
+    badgeText: "#f0f0ff",
+  },
 ];
 
 const hashString = (value: string) => {
@@ -79,12 +257,15 @@ const hashString = (value: string) => {
   return hash;
 };
 
-const categoryBadgeStyle = (category: string): CSSProperties => {
+const categoryThemeStyle = (category: string): CSSProperties => {
   const theme = CATEGORY_THEMES[category] ?? FALLBACK_THEMES[hashString(category) % FALLBACK_THEMES.length];
   return {
-    ["--cat-badge-bg" as any]: theme.bg,
-    ["--cat-badge-border" as any]: theme.border,
-    ["--cat-badge-text" as any]: theme.text,
+    ["--cat-card-bg" as any]: theme.cardBg,
+    ["--cat-card-border" as any]: theme.cardBorder,
+    ["--cat-badge-bg" as any]: theme.badgeBg,
+    ["--cat-badge-border" as any]: theme.badgeBorder,
+    ["--cat-badge-glow" as any]: theme.badgeGlow,
+    ["--cat-badge-text" as any]: theme.badgeText,
   };
 };
 
@@ -731,7 +912,7 @@ const App = () => {
               <div className="random-head">
                 <span
                   className="section-badge category-badge"
-                  style={categoryBadgeStyle(currentRandomIdea.category)}
+                  style={categoryThemeStyle(currentRandomIdea.category)}
                 >
                   {currentRandomView.category}
                 </span>
@@ -794,11 +975,11 @@ function IdeaCard({
   onRate: (rating: Rating) => void;
 }) {
   return (
-    <article className="idea-card">
+    <article className="idea-card" style={categoryThemeStyle(idea.category)}>
       <button type="button" className="idea-main" onClick={onOpen}>
           <div className="idea-heading">
           <div>
-            <span className="section-badge category-badge" style={categoryBadgeStyle(idea.category)}>
+            <span className="section-badge category-badge" style={categoryThemeStyle(idea.category)}>
               {display.category}
             </span>
             <h3>{display.title}</h3>
