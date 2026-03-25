@@ -32,6 +32,8 @@ type IdeaDraft = {
   rating: Rating;
 };
 
+const normalizeDisplayTitle = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
+
 const initialDraft = (category = categoryOrder[0] ?? "General"): IdeaDraft => ({
   title: "",
   category,
@@ -99,7 +101,7 @@ const App = () => {
 
   const visibleIdeas = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
-    return ideas
+    const filtered = ideas
       .filter((idea) => idea.rating !== 1)
       .filter((idea) => (activeCategory === "All" ? true : idea.category === activeCategory))
       .filter((idea) => (ratingFilter === "all" ? true : idea.rating === ratingFilter))
@@ -115,6 +117,16 @@ const App = () => {
         );
       })
       .sort((left, right) => left.sortIndex - right.sortIndex || left.title.localeCompare(right.title));
+    const seen = new Set<string>();
+    return filtered.filter((idea) => {
+      const display = getDisplayIdea(idea, locale);
+      const key = normalizeDisplayTitle(display.title);
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
   }, [ideas, activeCategory, ratingFilter, search, locale]);
 
   const hiddenCount = ideas.filter((idea) => idea.rating === 1).length;

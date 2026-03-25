@@ -180,10 +180,6 @@ const groups: SeedGroup[] = [
         description: "Assigns specific cleaning duties to maintenance staff.",
       },
       {
-        name: "Maintenance request tracker [cite: 44]",
-        description: "Logs in-room repair needs like plumbing or AC issues.",
-      },
-      {
         name: "Guest incident log tool [cite: 45]",
         description: "Documents complaints, accidents, or emergencies on the property.",
       },
@@ -308,10 +304,6 @@ const groups: SeedGroup[] = [
       {
         name: "Account relationship tagging tool [cite: 75]",
         description: "Links joint accounts or authorized users to a primary owner.",
-      },
-      {
-        name: "Compliance requirement tracker [cite: 76]",
-        description: "Ensures all necessary regulatory steps are logged for audits.",
       },
       {
         name: "KYC document status tool [cite: 77]",
