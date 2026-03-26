@@ -20,7 +20,7 @@ export const uiCopy = {
     allRatings: "Tất cả",
     twoStarOnly: "Chỉ 2 sao",
     threeStarOnly: "Chỉ 3 sao",
-    ideasInView: "ý tưởng đang hiển thị",
+    ideasInView: "ý tưởng",
     imported: "Đã nhập",
     custom: "Tự tạo",
     show: "Hiện",
@@ -88,7 +88,7 @@ export const uiCopy = {
     allRatings: "All ratings",
     twoStarOnly: "2-star only",
     threeStarOnly: "3-star only",
-    ideasInView: "ideas in view",
+    ideasInView: "ideas",
     imported: "Imported",
     custom: "Custom",
     show: "Show",
@@ -153,7 +153,7 @@ export const categoryLabels: Record<string, Record<Locale, string>> = {
   "Professional Services": { vi: "Dịch vụ", en: "Professional Services" },
   "Professional Services (Consulting, Legal, Accounting, etc.)": {
     vi: "Dịch vụ",
-    en: "Professional Services (Consulting, Legal, Accounting, etc.)",
+    en: "Professional Services",
   },
   Construction: { vi: "Xây dựng", en: "Construction" },
   Nonprofits: { vi: "Phi lợi nhuận", en: "Nonprofits" },
@@ -164,8 +164,8 @@ export const categoryLabels: Record<string, Record<Locale, string>> = {
   "Travel & Hospitality": { vi: "Du lịch & Lưu trú", en: "Travel & Hospitality" },
   "Media & Content": { vi: "Truyền thông & Nội dung", en: "Media & Content" },
   "Fintech/Financial Services": {
-    vi: "Fintech / Dịch vụ tài chính",
-    en: "Fintech/Financial Services",
+    vi: "Fintech",
+    en: "Fintech",
   },
 };
 

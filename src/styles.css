@@ -564,18 +564,26 @@ textarea {
 }
 
 .section-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   min-width: 0;
 }
 
 .section-title-row {
-  display: inline-flex;
-  align-items: baseline;
+  display: flex;
+  align-items: center;
   gap: 10px;
   min-width: 0;
+}
+
+.section-title-row h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .section-count {
@@ -586,6 +594,7 @@ textarea {
   font-weight: 750;
   color: var(--text-soft);
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .section-toggle {
@@ -905,6 +914,7 @@ textarea {
 
 .section-chevron {
   transition: transform 180ms ease;
+  justify-self: end;
 }
 
 .section-toggle[aria-expanded="false"] .section-chevron {
