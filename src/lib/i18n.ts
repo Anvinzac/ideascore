@@ -1,5 +1,6 @@
 import type { Idea } from "../types";
 import { translateTitleEnToVi } from "./descriptionComposer";
+import { viSeedDescriptions } from "./viSeedDescriptions.generated";
 
 export type Locale = "vi" | "en";
 
@@ -1044,8 +1045,16 @@ export const getDisplayIdea = (idea: Idea, locale: Locale) => {
   const isSeed = idea.source === "seed";
   const category = translateCategory(idea.category, locale);
   const title = isSeed ? translateSeedTitle(idea.title, locale) : idea.title;
-  const summary = idea.summary;
-  const details = idea.details;
+  let summary = idea.summary;
+  let details = idea.details;
+
+  if (isSeed && locale === "vi") {
+    const translated = viSeedDescriptions[idea.id];
+    if (translated) {
+      summary = translated.summary;
+      details = translated.details;
+    }
+  }
 
   return {
     title,
