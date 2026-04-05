@@ -1,5 +1,5 @@
 import type { Idea } from "../types";
-import { composeEnglishCopy } from "./descriptionComposer";
+import { composeEnglishCopy } from "./descriptionComposer.ts";
 
 type SeedEntry = {
   name: string;
@@ -200,6 +200,10 @@ export const moreSeedIdeas: Idea[] = groups.flatMap((group, categoryIndex) =>
       details: copy.details,
       rating: 0 as const,
       note: "",
+      phase: 1 as const,
+      aiThreads: {},
+      repoLink: "",
+      demoLink: "",
       source: "seed" as const,
       sortIndex: 8000 + categoryIndex * 100 + itemIndex,
       createdAt,

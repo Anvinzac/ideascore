@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Idea } from "../types";
-import { buildSeedIdeas } from "./seed";
-import { shouldAutoUpgradeSeedText } from "./descriptionComposer";
+import { buildSeedIdeas } from "./seed.ts";
+import { shouldAutoUpgradeSeedText } from "./descriptionComposer.ts";
 
 const STORAGE_KEY = "micro-tool-lab:ideas";
 const TABLE_NAME = "micro_tool_ideas";
@@ -35,11 +35,55 @@ type IdeaRow = {
   details: string;
   rating: number | null;
   note: string | null;
+  phase?: number | null;
+  ai_threads?: unknown | null;
+  repo_link?: string | null;
+  demo_link?: string | null;
   is_custom: boolean | null;
   sort_index: number | null;
   created_at: string | null;
   updated_at: string | null;
 };
+
+const normalizePhase = (value: unknown): Idea["phase"] => {
+  if (typeof value !== "number" || Number.isNaN(value)) return 1;
+  const rounded = Math.round(value);
+  if (rounded < 1) return 1;
+  if (rounded > 10) return 10;
+  return rounded as Idea["phase"];
+};
+
+const normalizeAiThreads = (value: unknown): Idea["aiThreads"] => {
+  if (!value || typeof value !== "object") return {};
+  try {
+    const raw = value as Record<string, unknown>;
+    const out: Idea["aiThreads"] = {};
+    Object.entries(raw).forEach(([providerId, thread]) => {
+      if (!thread || typeof thread !== "object") return;
+      const typed = thread as Record<string, unknown>;
+      const providerLabel = typeof typed.providerLabel === "string" ? typed.providerLabel : providerId;
+      const answersRaw = Array.isArray(typed.answers) ? typed.answers : [];
+      const answers = answersRaw
+        .map((entry) => {
+          if (!entry || typeof entry !== "object") return null;
+          const ans = entry as Record<string, unknown>;
+          const html = typeof ans.html === "string" ? ans.html : "";
+          if (!html.trim()) return null;
+          const id = typeof ans.id === "string" ? ans.id : `ans-${Math.random().toString(36).slice(2)}`;
+          const createdAt = typeof ans.createdAt === "string" ? ans.createdAt : new Date().toISOString();
+          return { id, html, createdAt };
+        })
+        .filter(Boolean) as Idea["aiThreads"][string]["answers"];
+
+      out[providerId] = { providerId, providerLabel, answers };
+    });
+    return out;
+  } catch {
+    return {};
+  }
+};
+
+const normalizeLink = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
 const toIdea = (row: IdeaRow): Idea => ({
   id: row.id,
@@ -49,6 +93,10 @@ const toIdea = (row: IdeaRow): Idea => ({
   details: row.details,
   rating: (row.rating ?? 0) as Idea["rating"],
   note: row.note ?? "",
+  phase: normalizePhase(row.phase),
+  aiThreads: normalizeAiThreads(row.ai_threads),
+  repoLink: normalizeLink(row.repo_link),
+  demoLink: normalizeLink(row.demo_link),
   source: row.is_custom ? "custom" : "seed",
   sortIndex: row.sort_index ?? 0,
   createdAt: row.created_at ?? new Date().toISOString(),
@@ -63,11 +111,34 @@ const fromIdea = (idea: Idea) => ({
   details: idea.details,
   rating: idea.rating,
   note: idea.note,
+  phase: idea.phase,
+  ai_threads: idea.aiThreads,
+  repo_link: idea.repoLink,
+  demo_link: idea.demoLink,
   is_custom: idea.source === "custom",
   sort_index: idea.sortIndex,
   created_at: idea.createdAt,
   updated_at: new Date().toISOString(),
 });
+
+const omitKeys = <T extends Record<string, unknown>>(row: T, keys: Set<string>) => {
+  if (keys.size === 0) return row;
+  const out: Record<string, unknown> = {};
+  Object.entries(row).forEach(([key, value]) => {
+    if (keys.has(key)) return;
+    out[key] = value;
+  });
+  return out as T;
+};
+
+const extractMissingColumn = (error: unknown): string | null => {
+  const message = (error as { message?: unknown } | null)?.message;
+  if (typeof message !== "string") return null;
+  const match = message.match(/column\s+"([^"]+)"\s+does not exist/i);
+  return match?.[1] ?? null;
+};
+
+const remoteUnsupportedColumns = new Set<string>();
 
 const readCachedIdeas = (): Idea[] => {
   if (typeof window === "undefined") return [];
@@ -75,7 +146,14 @@ const readCachedIdeas = (): Idea[] => {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Idea[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((idea) => ({
+      ...idea,
+      phase: normalizePhase((idea as unknown as { phase?: unknown }).phase),
+      aiThreads: normalizeAiThreads((idea as unknown as { aiThreads?: unknown }).aiThreads),
+      repoLink: normalizeLink((idea as unknown as { repoLink?: unknown }).repoLink),
+      demoLink: normalizeLink((idea as unknown as { demoLink?: unknown }).demoLink),
+    }));
   } catch {
     return [];
   }
@@ -91,6 +169,29 @@ const cacheIdeas = (ideas: Idea[]) => {
 };
 
 const remoteReady = () => Boolean(supabase);
+
+const upsertRemote = async (rows: Array<ReturnType<typeof fromIdea>>) => {
+  if (!remoteReady()) return;
+
+  const client = supabase!;
+  const attempt = async () => {
+    const payload = remoteUnsupportedColumns.size === 0 ? rows : rows.map((row) => omitKeys(row, remoteUnsupportedColumns));
+    return client.from(TABLE_NAME).upsert(payload, { onConflict: "id" });
+  };
+
+  for (let tries = 0; tries < 3; tries += 1) {
+    const result = await attempt();
+    if (!result.error) return;
+
+    const missing = extractMissingColumn(result.error);
+    if (missing) {
+      remoteUnsupportedColumns.add(missing);
+      continue;
+    }
+
+    throw result.error;
+  }
+};
 
 export const loadIdeas = async (): Promise<Idea[]> => {
   const seedIdeas = buildSeedIdeas();
@@ -141,7 +242,7 @@ export const loadIdeas = async (): Promise<Idea[]> => {
     (idea, index) => idea.title !== remoteIdeas[index].title,
   );
   if (changedRemoteIdeas.length > 0) {
-    await client.from(TABLE_NAME).upsert(changedRemoteIdeas.map(fromIdea), { onConflict: "id" });
+    await upsertRemote(changedRemoteIdeas.map(fromIdea));
   }
   const upgradedRemoteIdeas = normalizedRemoteIdeas.map(upgradeSeedText);
   const changedDescriptionIdeas = upgradedRemoteIdeas.filter((idea, index) => {
@@ -150,17 +251,18 @@ export const loadIdeas = async (): Promise<Idea[]> => {
       idea.summary !== previous?.summary ||
       idea.details !== previous?.details ||
       idea.category !== previous?.category ||
-      idea.sortIndex !== previous?.sortIndex
+      idea.sortIndex !== previous?.sortIndex ||
+      idea.phase !== previous?.phase
     );
   });
   if (changedDescriptionIdeas.length > 0) {
-    await client.from(TABLE_NAME).upsert(changedDescriptionIdeas.map(fromIdea), { onConflict: "id" });
+    await upsertRemote(changedDescriptionIdeas.map(fromIdea));
   }
   const remoteIds = new Set(remoteIdeas.map((idea) => idea.id));
   const missingSeedIdeas = seedIdeas.filter((idea) => !remoteIds.has(idea.id));
 
   if (missingSeedIdeas.length > 0) {
-    await client.from(TABLE_NAME).upsert(missingSeedIdeas.map(fromIdea), { onConflict: "id" });
+    await upsertRemote(missingSeedIdeas.map(fromIdea));
   }
 
   if (!data || data.length === 0) {
@@ -182,13 +284,7 @@ export const saveIdea = async (idea: Idea) => {
     return;
   }
 
-  const { error } = await supabase!
-    .from(TABLE_NAME)
-    .upsert(fromIdea(idea), { onConflict: "id" });
-
-  if (error) {
-    throw error;
-  }
+  await upsertRemote([fromIdea(idea)]);
 };
 
 export const saveIdeas = async (ideas: Idea[]) => {
@@ -198,13 +294,7 @@ export const saveIdeas = async (ideas: Idea[]) => {
     return;
   }
 
-  const { error } = await supabase!
-    .from(TABLE_NAME)
-    .upsert(ideas.map(fromIdea), { onConflict: "id" });
-
-  if (error) {
-    throw error;
-  }
+  await upsertRemote(ideas.map(fromIdea));
 };
 
 const mergeIdeas = (primary: Idea[], secondary: Idea[]) => {

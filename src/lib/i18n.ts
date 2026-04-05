@@ -1,6 +1,6 @@
 import type { Idea } from "../types";
-import { translateTitleEnToVi } from "./descriptionComposer";
-import { viSeedDescriptions } from "./viSeedDescriptions.generated";
+import { translateTitleEnToVi } from "./descriptionComposer.ts";
+import { viSeedDescriptions } from "./viSeedDescriptions.generated.ts";
 
 export type Locale = "vi" | "en";
 
@@ -22,6 +22,17 @@ export const uiCopy = {
     twoStarOnly: "Chỉ 2 sao",
     threeStarOnly: "Chỉ 3 sao",
     ideasInView: "ý tưởng",
+    tabReview: "Chấm",
+    tabBuild: "Triển khai",
+    phase: "Giai đoạn",
+    allPhases: "Tất cả",
+    startImplementation: "Bắt đầu triển khai",
+    backToIdea: "Đưa về ý tưởng",
+    noImplementationIdeas: "Chưa có ý tưởng nào đang triển khai.",
+    links: "Liên kết",
+    repoLink: "Repo",
+    demoLink: "Demo",
+    openLink: "Mở",
     imported: "Đã nhập",
     custom: "Tự tạo",
     show: "Hiện",
@@ -90,6 +101,17 @@ export const uiCopy = {
     twoStarOnly: "2-star only",
     threeStarOnly: "3-star only",
     ideasInView: "ideas",
+    tabReview: "Review",
+    tabBuild: "Build",
+    phase: "Phase",
+    allPhases: "All",
+    startImplementation: "Start implementation",
+    backToIdea: "Back to idea",
+    noImplementationIdeas: "No ideas are in implementation yet.",
+    links: "Links",
+    repoLink: "Repo link",
+    demoLink: "Demo link",
+    openLink: "Open",
     imported: "Imported",
     custom: "Custom",
     show: "Show",

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ClipboardEvent, CSSProperties, ReactNode } from "react";
 import {
   ArrowRight,
   BadgePlus,
@@ -17,10 +17,12 @@ import {
 } from "lucide-react";
 import { buildSeedIdeas, categoryOrder, isSeedCategory, normalizeCategoryOrder } from "./lib/seed";
 import { loadIdeas, saveIdea } from "./lib/persistence";
-import type { Idea, Rating } from "./types";
+import type { AiAnswer, AiThreads, Idea, IdeaPhase, Rating } from "./types";
 import { getDisplayIdea, getDraftDetails, getDraftSummary, getUiCopy, translateCategory, type Locale } from "./lib/i18n";
+import { PHASES, getPhaseDef, isImplementationPhase } from "./lib/phases";
 
 type RatingFilter = "all" | 2 | 3;
+type TabKey = "review" | "build";
 
 type IdeaDraft = {
   id?: string;
@@ -30,6 +32,9 @@ type IdeaDraft = {
   details: string;
   note: string;
   rating: Rating;
+  phase: IdeaPhase;
+  repoLink: string;
+  demoLink: string;
 };
 
 const normalizeDisplayTitle = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
@@ -276,7 +281,114 @@ const initialDraft = (category = categoryOrder[0] ?? "General"): IdeaDraft => ({
   details: "",
   note: "",
   rating: 0,
+  phase: 1,
+  repoLink: "",
+  demoLink: "",
 });
+
+type AiProviderDef = { id: string; label: string };
+
+const CORE_AI_PROVIDERS: AiProviderDef[] = [
+  { id: "chatgpt", label: "ChatGPT" },
+  { id: "claude", label: "Claude" },
+  { id: "perplexity", label: "Perplexity" },
+  { id: "gemini", label: "Gemini" },
+  { id: "meta", label: "Meta" },
+];
+
+const EXTRA_AI_PROVIDERS: AiProviderDef[] = [
+  { id: "qwen", label: "Qwen" },
+  { id: "kimi", label: "Kimi" },
+  { id: "minimax", label: "Minimax" },
+  { id: "manus", label: "Manus" },
+];
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const sanitizePastedHtml = (rawHtml: string) => {
+  if (typeof window === "undefined") return rawHtml;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, "text/html");
+    const allowedTags = new Set([
+      "p",
+      "br",
+      "div",
+      "span",
+      "strong",
+      "b",
+      "em",
+      "i",
+      "u",
+      "s",
+      "code",
+      "pre",
+      "blockquote",
+      "ul",
+      "ol",
+      "li",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "a",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "td",
+      "th",
+    ]);
+
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        const tag = el.tagName.toLowerCase();
+        if (!allowedTags.has(tag)) {
+          const parent = el.parentNode;
+          if (parent) {
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+          }
+          return;
+        }
+
+        // Keep only a small, safe attribute set.
+        [...el.attributes].forEach((attr) => {
+          const name = attr.name.toLowerCase();
+          const keep =
+            (tag === "a" && (name === "href" || name === "title")) ||
+            (name === "colspan" || name === "rowspan");
+          if (!keep) el.removeAttribute(attr.name);
+        });
+
+        if (tag === "a") {
+          const href = el.getAttribute("href") ?? "";
+          if (!/^https?:\/\//i.test(href) && !href.startsWith("mailto:")) {
+            el.removeAttribute("href");
+          } else {
+            el.setAttribute("rel", "nofollow noopener noreferrer");
+            el.setAttribute("target", "_blank");
+          }
+        }
+      }
+
+      Array.from(node.childNodes).forEach(walk);
+    };
+
+    walk(doc.body);
+    const html = doc.body.innerHTML.trim();
+    return html;
+  } catch {
+    return rawHtml;
+  }
+};
 
 const App = () => {
   const [locale, setLocale] = useState<Locale>(() => {
@@ -287,8 +399,10 @@ const App = () => {
   });
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabKey>("review");
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
+  const [phaseFilter, setPhaseFilter] = useState<IdeaPhase | "all">("all");
   const [search, setSearch] = useState("");
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -298,6 +412,7 @@ const App = () => {
   const [randomIndex, setRandomIndex] = useState(0);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [aiProviderToAdd, setAiProviderToAdd] = useState<string>("");
   const categoryMenuRef = useRef<HTMLDivElement | null>(null);
   const ui = getUiCopy(locale);
 
@@ -393,13 +508,62 @@ const App = () => {
     });
   }, [ideas, activeCategory, ratingFilter, search, locale]);
 
+  const implementationTotal = useMemo(
+    () => ideas.filter((idea) => idea.rating !== 1 && isImplementationPhase(idea.phase)).length,
+    [ideas],
+  );
+
+  const implementationIdeas = useMemo(() => {
+    const searchTerm = search.trim().toLowerCase();
+    const filtered = ideas
+      .filter((idea) => idea.rating !== 1)
+      .filter((idea) => isImplementationPhase(idea.phase))
+      .filter((idea) => (activeCategory === "All" ? true : idea.category === activeCategory))
+      .filter((idea) => (phaseFilter === "all" ? true : idea.phase === phaseFilter))
+      .filter((idea) => {
+        if (!searchTerm) return true;
+        const display = getDisplayIdea(idea, locale);
+        return (
+          display.title.toLowerCase().includes(searchTerm) ||
+          display.category.toLowerCase().includes(searchTerm) ||
+          display.summary.toLowerCase().includes(searchTerm) ||
+          display.details.toLowerCase().includes(searchTerm) ||
+          idea.note.toLowerCase().includes(searchTerm)
+        );
+      })
+      .sort((left, right) => left.sortIndex - right.sortIndex || left.title.localeCompare(right.title));
+    const seen = new Set<string>();
+    return filtered.filter((idea) => {
+      const display = getDisplayIdea(idea, locale);
+      const key = normalizeDisplayTitle(display.title);
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }, [ideas, activeCategory, phaseFilter, search, locale]);
+
   const hiddenCount = ideas.filter((idea) => idea.rating === 1).length;
   const twoStarCount = ideas.filter((idea) => idea.rating === 2).length;
   const threeStarCount = ideas.filter((idea) => idea.rating === 3).length;
   const activeCategoryLabel = activeCategory === "All" ? ui.allCategories : translateCategory(activeCategory, locale);
 
+  const tabVisibleCount = activeTab === "review" ? visibleIdeas.length : implementationIdeas.length;
+
   const detailIdea = detailId ? ideas.find((idea) => idea.id === detailId) ?? null : null;
   const detailView = detailIdea ? getDisplayIdea(detailIdea, locale) : null;
+  const detailAiProviders = useMemo(() => {
+    if (!detailIdea) return CORE_AI_PROVIDERS;
+    const existing = Object.values(detailIdea.aiThreads ?? {}).map((thread) => ({
+      id: thread.providerId,
+      label: thread.providerLabel,
+    }));
+    const merged = new Map<string, AiProviderDef>();
+    CORE_AI_PROVIDERS.forEach((provider) => merged.set(provider.id, provider));
+    existing.forEach((provider) => merged.set(provider.id, provider));
+    return Array.from(merged.values());
+  }, [detailIdea]);
 
   const currentRandomIdea = randomOpen ? ideas.find((idea) => idea.id === randomQueue[randomIndex]) ?? null : null;
   const currentRandomView = currentRandomIdea ? getDisplayIdea(currentRandomIdea, locale) : null;
@@ -418,6 +582,8 @@ const App = () => {
         ? {
             ...idea,
             ...patch,
+            repoLink: patch.repoLink ?? idea.repoLink ?? "",
+            demoLink: patch.demoLink ?? idea.demoLink ?? "",
             updatedAt: new Date().toISOString(),
           }
         : idea,
@@ -435,7 +601,46 @@ const App = () => {
     }
   };
 
+  const ensureThread = (threads: AiThreads, provider: AiProviderDef): AiThreads => {
+    if (threads[provider.id]) return threads;
+    return {
+      ...threads,
+      [provider.id]: {
+        providerId: provider.id,
+        providerLabel: provider.label,
+        answers: [],
+      },
+    };
+  };
+
+  const addAiAnswer = async (idea: Idea, provider: AiProviderDef, rawHtml: string) => {
+    const cleaned = sanitizePastedHtml(rawHtml);
+    if (!cleaned.trim()) return;
+
+    const now = new Date().toISOString();
+    const answer: AiAnswer = {
+      id: `ans-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
+      html: cleaned,
+      createdAt: now,
+    };
+
+    const currentThreads = idea.aiThreads ?? {};
+    const withThread = ensureThread(currentThreads, provider);
+    const thread = withThread[provider.id]!;
+    const nextThreads: AiThreads = {
+      ...withThread,
+      [provider.id]: {
+        ...thread,
+        providerLabel: provider.label,
+        answers: [...(thread.answers ?? []), answer],
+      },
+    };
+
+    await updateIdea(idea.id, { aiThreads: nextThreads });
+  };
+
   const startRandomMode = () => {
+    setActiveTab("review");
     if (visibleIdeas.length === 0) {
       setSyncError(ui.noMatch);
       return;
@@ -470,6 +675,9 @@ const App = () => {
       details: idea.details,
       note: idea.note,
       rating: idea.rating,
+      phase: idea.phase,
+      repoLink: idea.repoLink ?? "",
+      demoLink: idea.demoLink ?? "",
     });
   };
 
@@ -491,6 +699,10 @@ const App = () => {
         getDraftDetails(locale, editorDraft.category.trim() || "General", editorDraft.title.trim()),
       rating: editorDraft.rating,
       note: editorDraft.note.trim(),
+      phase: existing?.phase ?? editorDraft.phase ?? 1,
+      aiThreads: existing?.aiThreads ?? {},
+      repoLink: editorDraft.repoLink.trim(),
+      demoLink: editorDraft.demoLink.trim(),
       source: existing?.source ?? "custom",
       sortIndex: existing?.sortIndex ?? ideas.length + 1,
       createdAt: existing?.createdAt ?? now,
@@ -521,6 +733,17 @@ const App = () => {
         }))
         .filter((entry) => entry.ideas.length > 0),
     [categories, visibleIdeas],
+  );
+
+  const implementationSections = useMemo(
+    () =>
+      categories
+        .map((category) => ({
+          category,
+          ideas: implementationIdeas.filter((idea) => idea.category === category),
+        }))
+        .filter((entry) => entry.ideas.length > 0),
+    [categories, implementationIdeas],
   );
 
   useEffect(() => {
@@ -597,10 +820,33 @@ const App = () => {
         </div>
 
         <div className="stat-row">
-          <Stat label={ui.visible} value={visibleIdeas.length} />
+          <Stat label={ui.visible} value={tabVisibleCount} />
           <Stat label={ui.twoStar} value={twoStarCount} />
           <Stat label={ui.threeStar} value={threeStarCount} />
           <Stat label={ui.hidden} value={hiddenCount} />
+        </div>
+
+        <div className="tab-strip" role="tablist" aria-label="Mode">
+          <button
+            type="button"
+            role="tab"
+            className={`tab-chip ${activeTab === "review" ? "active" : ""}`}
+            aria-selected={activeTab === "review"}
+            onClick={() => setActiveTab("review")}
+          >
+            <span>{ui.tabReview}</span>
+            <strong>{visibleIdeas.length}</strong>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={`tab-chip ${activeTab === "build" ? "active" : ""}`}
+            aria-selected={activeTab === "build"}
+            onClick={() => setActiveTab("build")}
+          >
+            <span>{ui.tabBuild}</span>
+            <strong>{implementationTotal}</strong>
+          </button>
         </div>
 
         {syncError ? (
@@ -675,44 +921,64 @@ const App = () => {
           </div>
         </div>
 
-        <div className="chip-strip">
-          <FilterChip active={ratingFilter === "all"} onClick={() => setRatingFilter("all")}>
-            {ui.allRatings}
-          </FilterChip>
-          <FilterChip active={ratingFilter === 2} onClick={() => setRatingFilter(2)}>
-            {ui.twoStarOnly}
-          </FilterChip>
-          <FilterChip active={ratingFilter === 3} onClick={() => setRatingFilter(3)}>
-            {ui.threeStarOnly}
-          </FilterChip>
-        </div>
+        {activeTab === "review" ? (
+          <div className="chip-strip">
+            <FilterChip active={ratingFilter === "all"} onClick={() => setRatingFilter("all")}>
+              {ui.allRatings}
+            </FilterChip>
+            <FilterChip active={ratingFilter === 2} onClick={() => setRatingFilter(2)}>
+              {ui.twoStarOnly}
+            </FilterChip>
+            <FilterChip active={ratingFilter === 3} onClick={() => setRatingFilter(3)}>
+              {ui.threeStarOnly}
+            </FilterChip>
+          </div>
+        ) : (
+          <div className="chip-strip">
+            <FilterChip active={phaseFilter === "all"} onClick={() => setPhaseFilter("all")}>
+              {ui.allPhases}
+            </FilterChip>
+            {PHASES.filter((phase) => phase.id >= 3).map((phase) => {
+              const copy = locale === "vi" ? phase.vi : phase.en;
+              return (
+                <FilterChip
+                  key={phase.id}
+                  active={phaseFilter === phase.id}
+                  onClick={() => setPhaseFilter(phase.id)}
+                >
+                  {phase.id} {copy.short}
+                </FilterChip>
+              );
+            })}
+          </div>
+        )}
       </header>
 
       <main className="content">
         {loading ? (
           <LoadingGrid />
-        ) : sections.length > 0 ? (
-          sections.map((section) => (
-            <section key={section.category} className="section">
-              <button
-                type="button"
-                className="section-head section-toggle"
-                aria-expanded={!collapsedCategories[section.category]}
-                onClick={() => toggleCategory(section.category)}
-              >
-                <div className="section-title-row">
-                  <h2>{translateCategory(section.category, locale)}</h2>
-                  <span className="section-count">
-                    {section.ideas.length} {ui.ideasInView}
-                  </span>
-                </div>
-                <ChevronDown size={16} className="section-chevron" />
-              </button>
+        ) : activeTab === "review" ? (
+          sections.length > 0 ? (
+            sections.map((section) => (
+              <section key={section.category} className="section">
+                <button
+                  type="button"
+                  className="section-head section-toggle"
+                  aria-expanded={!collapsedCategories[section.category]}
+                  onClick={() => toggleCategory(section.category)}
+                >
+                  <div className="section-title-row">
+                    <h2>{translateCategory(section.category, locale)}</h2>
+                    <span className="section-count">
+                      {section.ideas.length} {ui.ideasInView}
+                    </span>
+                  </div>
+                  <ChevronDown size={16} className="section-chevron" />
+                </button>
 
-              <div className={`section-body ${collapsedCategories[section.category] ? "collapsed" : "expanded"}`}>
-                <div className="cards">
-                  {section.ideas.map((idea) => (
-                    (() => {
+                <div className={`section-body ${collapsedCategories[section.category] ? "collapsed" : "expanded"}`}>
+                  <div className="cards">
+                    {section.ideas.map((idea) => {
                       const display = getDisplayIdea(idea, locale);
                       return (
                         <IdeaCard
@@ -723,23 +989,73 @@ const App = () => {
                           onOpen={() => setDetailId(idea.id)}
                           onEdit={() => beginEdit(idea)}
                           onRate={(rating) => updateIdea(idea.id, { rating })}
+                          onToggleImplementation={() =>
+                            updateIdea(idea.id, { phase: isImplementationPhase(idea.phase) ? 1 : 3 })
+                          }
                         />
                       );
-                    })()
-                  ))}
+                    })}
+                  </div>
                 </div>
-              </div>
-            </section>
-          ))
+              </section>
+            ))
+          ) : (
+            <EmptyState
+              ui={ui}
+              onReset={() => {
+                setActiveCategory("All");
+                setRatingFilter("all");
+                setSearch("");
+              }}
+            />
+          )
         ) : (
-          <EmptyState
-            ui={ui}
-            onReset={() => {
-              setActiveCategory("All");
-              setRatingFilter("all");
-              setSearch("");
-            }}
-          />
+          <>
+            <PhaseLegend locale={locale} />
+            {implementationSections.length > 0 ? (
+              implementationSections.map((section) => (
+                <section key={section.category} className="section">
+                  <button
+                    type="button"
+                    className="section-head section-toggle"
+                    aria-expanded={!collapsedCategories[section.category]}
+                    onClick={() => toggleCategory(section.category)}
+                  >
+                    <div className="section-title-row">
+                      <h2>{translateCategory(section.category, locale)}</h2>
+                      <span className="section-count">
+                        {section.ideas.length} {ui.ideasInView}
+                      </span>
+                    </div>
+                    <ChevronDown size={16} className="section-chevron" />
+                  </button>
+
+                  <div className={`section-body ${collapsedCategories[section.category] ? "collapsed" : "expanded"}`}>
+                    <div className="cards">
+                      {section.ideas.map((idea) => {
+                        const display = getDisplayIdea(idea, locale);
+                        return (
+                          <ImplementationCard
+                            key={idea.id}
+                            idea={idea}
+                            display={display}
+                            locale={locale}
+                            ui={ui}
+                            onOpen={() => setDetailId(idea.id)}
+                            onEdit={() => beginEdit(idea)}
+                            onPhase={(phase) => updateIdea(idea.id, { phase })}
+                            onBack={() => updateIdea(idea.id, { phase: 1 })}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </section>
+              ))
+            ) : (
+              <EmptyImplementationState ui={ui} onGoReview={() => setActiveTab("review")} />
+            )}
+          </>
         )}
       </main>
 
@@ -773,7 +1089,131 @@ const App = () => {
               <span className="meta-pill">
                 {ui.category}: {detailView?.category ?? detailIdea.category}
               </span>
+              <span className="meta-pill">
+                {ui.phase}: {(locale === "vi" ? getPhaseDef(detailIdea.phase).vi.label : getPhaseDef(detailIdea.phase).en.label)}
+              </span>
             </div>
+
+            <div className="phase-block">
+              <div className="phase-controls">
+                <select
+                  className="phase-select"
+                  value={detailIdea.phase}
+                  onChange={(event) => updateIdea(detailIdea.id, { phase: Number(event.target.value) as IdeaPhase })}
+                  aria-label={ui.phase}
+                >
+                  {PHASES.map((phase) => {
+                    const copy = locale === "vi" ? phase.vi : phase.en;
+                    return (
+                      <option key={phase.id} value={phase.id}>
+                        {phase.id}. {copy.label}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                {detailIdea.phase < 3 ? (
+                  <button
+                    type="button"
+                    className="ghost-button phase-start"
+                    onClick={() => updateIdea(detailIdea.id, { phase: 3 })}
+                  >
+                    <Layers3 size={16} />
+                    {ui.startImplementation}
+                  </button>
+                ) : null}
+
+                {detailIdea.phase !== 1 ? (
+                  <button
+                    type="button"
+                    className="ghost-button phase-back"
+                    onClick={() => updateIdea(detailIdea.id, { phase: 1 })}
+                  >
+                    {ui.backToIdea}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {detailIdea.phase >= 2 ? (
+              <div className="ai-block">
+                <div className="ai-head">
+                  <h3>AI</h3>
+                  <div className="ai-add">
+                    <select
+                      value={aiProviderToAdd}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setAiProviderToAdd(value);
+                        const provider = EXTRA_AI_PROVIDERS.find((entry) => entry.id === value);
+                        if (!provider || !detailIdea) return;
+                        updateIdea(detailIdea.id, { aiThreads: { ...detailIdea.aiThreads, [provider.id]: { providerId: provider.id, providerLabel: provider.label, answers: [] } } });
+                        setAiProviderToAdd("");
+                      }}
+                      aria-label="Add AI service"
+                    >
+                      <option value="">Add AI</option>
+                      {EXTRA_AI_PROVIDERS.filter((provider) => !(provider.id in (detailIdea.aiThreads ?? {}))).map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="ai-grid">
+                  {detailAiProviders.map((provider) => (
+                    <AiProviderPanel
+                      key={provider.id}
+                      provider={provider}
+                      thread={(detailIdea.aiThreads ?? {})[provider.id]}
+                      onAdd={(rawHtml) => addAiAnswer(detailIdea, provider, rawHtml)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {detailIdea.phase >= 5 ? (
+              <div className="links-block">
+                <div className="links-head">
+                  <h3>{ui.links}</h3>
+                </div>
+
+                <div className="links-grid">
+                  <label className="link-field">
+                    <span>{ui.repoLink}</span>
+                    <input
+                      defaultValue={detailIdea.repoLink}
+                      placeholder="https://github.com/..."
+                      onBlur={(event) => updateIdea(detailIdea.id, { repoLink: event.target.value.trim() })}
+                      inputMode="url"
+                    />
+                    {detailIdea.repoLink ? (
+                      <a className="link-open" href={detailIdea.repoLink} target="_blank" rel="noreferrer">
+                        {ui.openLink}
+                      </a>
+                    ) : null}
+                  </label>
+
+                  <label className="link-field">
+                    <span>{ui.demoLink}</span>
+                    <input
+                      defaultValue={detailIdea.demoLink}
+                      placeholder="https://your-demo.vercel.app"
+                      onBlur={(event) => updateIdea(detailIdea.id, { demoLink: event.target.value.trim() })}
+                      inputMode="url"
+                    />
+                    {detailIdea.demoLink ? (
+                      <a className="link-open" href={detailIdea.demoLink} target="_blank" rel="noreferrer">
+                        {ui.openLink}
+                      </a>
+                    ) : null}
+                  </label>
+                </div>
+              </div>
+            ) : null}
 
             <div className="rating-block">
               <label>{ui.rateThisIdea}</label>
@@ -875,6 +1315,41 @@ const App = () => {
                 ))}
               </div>
             </Field>
+            <Field label={ui.phase}>
+              <select
+                value={editorDraft.phase}
+                onChange={(event) => setEditorDraft({ ...editorDraft, phase: Number(event.target.value) as IdeaPhase })}
+              >
+                {PHASES.map((phase) => {
+                  const copy = locale === "vi" ? phase.vi : phase.en;
+                  return (
+                    <option key={phase.id} value={phase.id}>
+                      {phase.id}. {copy.label}
+                    </option>
+                  );
+                })}
+              </select>
+            </Field>
+            {editorDraft.phase >= 5 ? (
+              <>
+                <Field label={ui.repoLink} full>
+                  <input
+                    value={editorDraft.repoLink}
+                    onChange={(event) => setEditorDraft({ ...editorDraft, repoLink: event.target.value })}
+                    placeholder="https://github.com/..."
+                    inputMode="url"
+                  />
+                </Field>
+                <Field label={ui.demoLink} full>
+                  <input
+                    value={editorDraft.demoLink}
+                    onChange={(event) => setEditorDraft({ ...editorDraft, demoLink: event.target.value })}
+                    placeholder="https://your-demo.vercel.app"
+                    inputMode="url"
+                  />
+                </Field>
+              </>
+            ) : null}
           </div>
         </IdeaSheet>
       ) : null}
@@ -966,6 +1441,7 @@ function IdeaCard({
   onOpen,
   onEdit,
   onRate,
+  onToggleImplementation,
 }: {
   idea: Idea;
   display: ReturnType<typeof getDisplayIdea>;
@@ -973,7 +1449,9 @@ function IdeaCard({
   onOpen: () => void;
   onEdit: () => void;
   onRate: (rating: Rating) => void;
+  onToggleImplementation: () => void;
 }) {
+  const implementing = isImplementationPhase(idea.phase);
   return (
     <article className="idea-card" style={categoryThemeStyle(idea.category)}>
       <button type="button" className="idea-main" onClick={onOpen}>
@@ -996,11 +1474,196 @@ function IdeaCard({
 
       <div className="card-footer">
         <StarRating value={idea.rating} onChange={onRate} compact />
-        <button type="button" className="mini-button" onClick={onEdit}>
-          {ui.editIdea}
-        </button>
+        <div className="card-actions">
+          <button
+            type="button"
+            className={`icon-button phase-toggle ${implementing ? "active" : ""}`}
+            onClick={onToggleImplementation}
+            aria-label={implementing ? ui.backToIdea : ui.startImplementation}
+            title={implementing ? ui.backToIdea : ui.startImplementation}
+          >
+            <Layers3 size={16} />
+          </button>
+          <button type="button" className="mini-button" onClick={onEdit}>
+            {ui.editIdea}
+          </button>
+        </div>
       </div>
     </article>
+  );
+}
+
+function ImplementationCard({
+  idea,
+  display,
+  locale,
+  ui,
+  onOpen,
+  onEdit,
+  onPhase,
+  onBack,
+}: {
+  idea: Idea;
+  display: ReturnType<typeof getDisplayIdea>;
+  locale: Locale;
+  ui: ReturnType<typeof getUiCopy>;
+  onOpen: () => void;
+  onEdit: () => void;
+  onPhase: (phase: IdeaPhase) => void;
+  onBack: () => void;
+}) {
+  const def = getPhaseDef(idea.phase);
+  const copy = locale === "vi" ? def.vi : def.en;
+  return (
+    <article className="idea-card implementation-card" style={categoryThemeStyle(idea.category)}>
+      <button type="button" className="idea-main" onClick={onOpen}>
+        <div className="idea-heading">
+          <div>
+            <div className="badge-row">
+              <span className="section-badge category-badge" style={categoryThemeStyle(idea.category)}>
+                {display.category}
+              </span>
+              <span className="section-badge phase-badge">
+                {idea.phase} {copy.short}
+              </span>
+            </div>
+            <h3>{display.title}</h3>
+          </div>
+        </div>
+        <p>{display.summary}</p>
+      </button>
+
+      <div className="card-footer">
+        <select
+          className="phase-select"
+          value={idea.phase}
+          onChange={(event) => onPhase(Number(event.target.value) as IdeaPhase)}
+          aria-label={ui.phase}
+        >
+          {PHASES.map((phase) => {
+            const optionCopy = locale === "vi" ? phase.vi : phase.en;
+            return (
+              <option key={phase.id} value={phase.id}>
+                {phase.id}. {optionCopy.label}
+              </option>
+            );
+          })}
+        </select>
+        <div className="card-actions">
+          <button type="button" className="mini-button" onClick={onEdit}>
+            {ui.editIdea}
+          </button>
+          <button type="button" className="mini-button" onClick={onBack}>
+            {ui.backToIdea}
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PhaseLegend({ locale }: { locale: Locale }) {
+  return (
+    <details className="phase-legend">
+      <summary>{locale === "vi" ? "Các giai đoạn" : "Phases"}</summary>
+      <div className="phase-legend-grid">
+        {PHASES.map((phase) => {
+          const copy = locale === "vi" ? phase.vi : phase.en;
+          return (
+            <div key={phase.id} className="phase-legend-row">
+              <strong>{phase.id}</strong>
+              <div>
+                <div className="phase-legend-title">{copy.label}</div>
+                <div className="phase-legend-hint">{copy.hint}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
+function AiProviderPanel({
+  provider,
+  thread,
+  onAdd,
+}: {
+  provider: { id: string; label: string };
+  thread: { answers: AiAnswer[] } | undefined;
+  onAdd: (rawHtml: string) => Promise<void>;
+}) {
+  const pasteRef = useRef<HTMLDivElement | null>(null);
+  const [saving, setSaving] = useState(false);
+  const answers = thread?.answers ?? [];
+
+  const handlePaste = async (event: ClipboardEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const html = event.clipboardData.getData("text/html");
+    const text = event.clipboardData.getData("text/plain");
+    const raw = html && html.trim().length > 0 ? html : `<pre>${escapeHtml(text)}</pre>`;
+    if (!raw.trim()) return;
+
+    setSaving(true);
+    try {
+      await onAdd(raw);
+      if (pasteRef.current) {
+        pasteRef.current.innerHTML = "";
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="ai-panel">
+      <div className="ai-panel-head">
+        <strong>{provider.label}</strong>
+        <span className="ai-count">{answers.length}</span>
+      </div>
+
+      <div className="ai-answers">
+        {answers.length > 0 ? (
+          answers.map((answer, index) => (
+            <details
+              key={answer.id}
+              className="ai-answer"
+              open={index === answers.length - 1}
+            >
+              <summary>Answer {index + 1}</summary>
+              <div className="ai-html" dangerouslySetInnerHTML={{ __html: answer.html }} />
+            </details>
+          ))
+        ) : (
+          <div className="ai-empty">Paste a response to start.</div>
+        )}
+      </div>
+
+      <div className={`ai-paste ${saving ? "saving" : ""}`}>
+        <div
+          ref={pasteRef}
+          className="ai-paste-box"
+          contentEditable
+          suppressContentEditableWarning
+          onPaste={handlePaste}
+          data-placeholder="Paste rich text here. Each paste becomes a new answer."
+          aria-label={`Paste ${provider.label} answer`}
+        />
+      </div>
+    </section>
+  );
+}
+
+function EmptyImplementationState({ ui, onGoReview }: { ui: ReturnType<typeof getUiCopy>; onGoReview: () => void }) {
+  return (
+    <div className="empty">
+      <Layers3 size={30} />
+      <h3>{ui.noImplementationIdeas}</h3>
+      <p>{ui.noVisibleIdeasBody}</p>
+      <button type="button" className="primary-button" onClick={onGoReview}>
+        {ui.tabReview}
+      </button>
+    </div>
   );
 }
 

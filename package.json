@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "echo 'Add your preferred linter if needed'",
-    "translate:vi": "node --experimental-strip-types scripts/translateViSeedDescriptions.ts"
+    "export:en": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/exportEnglishSeedDescriptions.ts",
+    "translate:vi": "node --experimental-strip-types --experimental-specifier-resolution=node scripts/translateViSeedDescriptions.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.0",

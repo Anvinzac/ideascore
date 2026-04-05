@@ -1,8 +1,8 @@
 import type { Idea } from "../types";
-import { normalizeIdeaTitleKey, seedDescriptionOverrides } from "./descriptionOverrides";
-import { additionalSeedCategories, additionalSeedIdeas } from "./additionalSeedIdeas";
-import { moreSeedCategories, moreSeedIdeas } from "./additionalSeedIdeas2";
-import { composeEnglishCopy } from "./descriptionComposer";
+import { normalizeIdeaTitleKey, seedDescriptionOverrides } from "./descriptionOverrides.ts";
+import { additionalSeedCategories, additionalSeedIdeas } from "./additionalSeedIdeas.ts";
+import { moreSeedCategories, moreSeedIdeas } from "./additionalSeedIdeas2.ts";
+import { composeEnglishCopy } from "./descriptionComposer.ts";
 
 export const seedCategories = [
   {
@@ -282,6 +282,10 @@ export const buildSeedIdeas = (): Idea[] =>
           ...makeCopy(group.category, normalizedTitle),
           rating: 0 as const,
           note: "",
+          phase: 1 as const,
+          aiThreads: {},
+          repoLink: "",
+          demoLink: "",
           source: "seed" as const,
           sortIndex: categoryIndex * 100 + itemIndex,
           createdAt,
@@ -309,6 +313,10 @@ export const createDefaultIdea = (category: string, title = "Untitled idea"): Id
     details: copy.details,
     rating: 0,
     note: "",
+    phase: 1,
+    aiThreads: {},
+    repoLink: "",
+    demoLink: "",
     source: "custom",
     sortIndex: 9999,
     createdAt,

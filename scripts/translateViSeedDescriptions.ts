@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { Idea } from "../src/types";
-import { buildSeedIdeas } from "../src/lib/seed";
+import { buildSeedIdeas } from "../src/lib/seed.ts";
 
 type TranslationRow = {
   summary: string;
@@ -143,4 +143,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
